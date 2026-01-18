@@ -1,9 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useSyncExternalStore, useMemo } from "react";
 import { FolderOpen, Terminal, AlertTriangle, CheckCircle, Loader2, GitBranch, Trash2 } from "lucide-react";
 import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input } from "@/components/ui";
+import { HeaderControls } from "@/components/HeaderControls";
+import { LogPanel } from "@/components/LogPanel";
+
+import { useTranslation } from "react-i18next";
+
+import { addLog, getLogSnapshot, parseLogEvent, subscribeLogs } from "@/lib/logStore";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
+
+import { isTauriRuntime } from "@/lib/tauriRuntime";
 
 type Step = "connect" | "analyze" | "confirm" | "execute" | "success";
 
@@ -16,25 +24,27 @@ interface RepoInfo {
 }
 
 function App() {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>("connect");
   const [repoPath, setRepoPath] = useState<string>("");
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [confirmText, setConfirmText] = useState("");
-  const [logs, setLogs] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const logsEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const logSnapshot = useSyncExternalStore(subscribeLogs, getLogSnapshot, getLogSnapshot);
+
+  const execLogs = useMemo(() => {
+    return logSnapshot.entries
+      .filter((e) => e.category === "tauri" || e.category === "execute")
+      .map((e) => (e.level === "error" ? `ERROR: ${e.message}` : e.message));
+  }, [logSnapshot.entries]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [logs]);
+    if (!isTauriRuntime()) return;
 
-  useEffect(() => {
     const unlisten = listen<string>("log-event", (event) => {
-      setLogs((prev) => [...prev, event.payload]);
+      const parsed = parseLogEvent(event.payload);
+      addLog({ level: parsed.level, category: "tauri", message: parsed.message });
     });
     return () => {
       unlisten.then((f) => f());
@@ -59,49 +69,53 @@ function App() {
   const analyzeRepo = async (path: string) => {
     setIsProcessing(true);
     try {
-        const info = await invoke<RepoInfo>("scan_repo", { path });
-        setRepoInfo(info);
-        setStep("analyze");
+      const info = await invoke<RepoInfo>("scan_repo", { path });
+      setRepoInfo(info);
+      setStep("analyze");
     } catch (err) {
-        console.error(err);
-        alert("Failed to analyze repository: " + err);
+      console.error(err);
+      alert(t("analysis.alertFailed", { error: String(err) }));
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
   };
 
   const handleExecute = async () => {
     setStep("execute");
-    setLogs(["Starting clean up process...", "Please wait..."]);
+    addLog({ level: "info", category: "execute", message: t("execute.startingCleanup") });
+    addLog({ level: "info", category: "execute", message: t("execute.pleaseWait") });
+
     try {
-        await invoke("execute_reset", { path: repoPath });
-        setStep("success");
+      await invoke("execute_reset", { path: repoPath });
+      setStep("success");
     } catch (err) {
-        setLogs(prev => [...prev, `ERROR: ${err}`]);
+      addLog({ level: "error", category: "execute", message: String(err) });
     }
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative">
+      <LogPanel />
+      <HeaderControls />
       <div className="w-full max-w-2xl">
         <div className="mb-8 text-center space-y-2">
            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
-             <GitBranch className="w-6 h-6 text-primary" />
+             <GitBranch className="h-6 w-6 text-primary drop-shadow-[0_1px_0_hsl(var(--background))] dark:drop-shadow-[0_1px_0_rgba(255,255,255,0.15)]" />
            </div>
-           <h1 className="text-3xl font-bold tracking-tight">RepoZero</h1>
-           <p className="text-muted-foreground">The nuclear option for bloated repositories.</p>
+           <h1 className="text-3xl font-bold tracking-tight">{t("app.title")}</h1>
+           <p className="text-muted-foreground">{t("app.subtitle")}</p>
         </div>
 
         {step === "connect" && (
             <Card>
                 <CardHeader>
-                    <CardTitle>Select Repository</CardTitle>
-                    <CardDescription>Choose the local folder of the git repository you want to reset.</CardDescription>
+                    <CardTitle>{t("selectRepo.title")}</CardTitle>
+                    <CardDescription>{t("selectRepo.desc")}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
                     <Button size="lg" onClick={handleSelectFolder} disabled={isProcessing}>
                         {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderOpen className="mr-2 h-4 w-4" />}
-                        {isProcessing ? "Analyzing..." : "Browse Folder"}
+                        {isProcessing ? t("selectRepo.analyzing") : t("selectRepo.browse")}
                     </Button>
                 </CardContent>
             </Card>
@@ -110,30 +124,30 @@ function App() {
         {step === "analyze" && repoInfo && (
             <Card>
                 <CardHeader>
-                    <CardTitle>Repository Analysis</CardTitle>
-                    <CardDescription>We found the following information.</CardDescription>
+                    <CardTitle>{t("analysis.title")}</CardTitle>
+                    <CardDescription>{t("analysis.desc")}</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
                     <div className="p-4 border rounded-lg">
-                        <div className="text-sm font-medium text-muted-foreground">Remote URL</div>
+                        <div className="text-sm font-medium text-muted-foreground">{t("analysis.remoteUrl")}</div>
                         <div className="font-mono text-sm truncate">{repoInfo.remote_url}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
-                        <div className="text-sm font-medium text-muted-foreground">Current Size</div>
+                        <div className="text-sm font-medium text-muted-foreground">{t("analysis.currentSize")}</div>
                         <div className="text-xl font-bold">{repoInfo.size_human}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
-                        <div className="text-sm font-medium text-muted-foreground">Branches</div>
+                        <div className="text-sm font-medium text-muted-foreground">{t("analysis.branches")}</div>
                         <div className="text-xl font-bold">{repoInfo.branch_count}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
-                        <div className="text-sm font-medium text-muted-foreground">Tags</div>
+                        <div className="text-sm font-medium text-muted-foreground">{t("analysis.tags")}</div>
                         <div className="text-xl font-bold">{repoInfo.tag_count}</div>
                     </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
-                    <Button variant="ghost" onClick={() => setStep("connect")}>Back</Button>
-                    <Button onClick={() => setStep("confirm")}>Next: Logic Reset</Button>
+                    <Button variant="ghost" onClick={() => setStep("connect")}>{t("analysis.back")}</Button>
+                    <Button onClick={() => setStep("confirm")}>{t("analysis.next")}</Button>
                 </CardFooter>
             </Card>
         )}
@@ -143,39 +157,39 @@ function App() {
                 <CardHeader>
                     <CardTitle className="text-destructive flex items-center">
                         <AlertTriangle className="mr-2 h-5 w-5" />
-                        Danger Zone
+                        {t("danger.title")}
                     </CardTitle>
                     <CardDescription>
-                        This action is <strong>irreversible</strong>. It will:
+                        {t("danger.willIntro")}
                         <ul className="list-disc list-inside mt-2 space-y-1">
-                            <li>Delete ALL history (commits, logs) forever.</li>
-                            <li>Delete ALL branches and tags on remote.</li>
-                            <li>Force push a new empty commit to master/main.</li>
+                            <li>{t("danger.will.history")}</li>
+                            <li>{t("danger.will.branchesTags")}</li>
+                            <li>{t("danger.will.forcePush")}</li>
                         </ul>
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">
-                            Type <span className="font-mono font-bold select-all">nuclear reset</span> to confirm:
+                            {t("danger.confirmPrefix")} <span className="font-mono font-bold select-all">{t("danger.confirmPhrase")}</span> {t("danger.confirmSuffix")}
                         </label>
                         <Input 
                             value={confirmText} 
                             onChange={(e) => setConfirmText(e.target.value)} 
-                            placeholder="nuclear reset"
+                            placeholder={t("danger.confirmPlaceholder")}
                             className="border-destructive/30 focus-visible:ring-destructive"
                         />
                     </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
-                    <Button variant="ghost" onClick={() => setStep("analyze")}>Cancel</Button>
+                    <Button variant="ghost" onClick={() => setStep("analyze")}>{t("danger.cancel")}</Button>
                     <Button 
                         variant="destructive" 
                         disabled={confirmText !== "nuclear reset"}
                         onClick={handleExecute}
                     >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Execute Reset
+                        {t("danger.execute")}
                     </Button>
                 </CardFooter>
             </Card>
@@ -186,15 +200,14 @@ function App() {
                 <CardHeader className="border-b border-zinc-800 pb-2">
                     <CardTitle className="text-sm flex items-center">
                         <Terminal className="mr-2 h-4 w-4" />
-                        Execution Log
+                        {t("execute.title")}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="h-64 overflow-y-auto p-4 space-y-1 text-xs">
-                        {logs.map((log, i) => (
+                        {execLogs.map((log, i) => (
                             <div key={i}>&gt; {log}</div>
                         ))}
-                         <div ref={logsEndRef} />
                     </div>
                 </CardContent>
             </Card>
@@ -205,17 +218,17 @@ function App() {
                  <CardHeader>
                     <CardTitle className="text-green-600 flex items-center">
                         <CheckCircle className="mr-2 h-5 w-5" />
-                        Operation Successful
+                        {t("success.title")}
                     </CardTitle>
                     <CardDescription>
-                        The repository has been successfully reset.
+                        {t("success.desc")}
                     </CardDescription>
                 </CardHeader>
                  <CardContent>
                     <p className="mb-4">
-                        Your remote repository is now clean. Please inform your team to re-clone the repository.
+                        {t("success.remoteCleanNote")}
                     </p>
-                    <Button onClick={() => window.location.reload()} variant="outline">Start Over</Button>
+                    <Button onClick={() => window.location.reload()} variant="outline">{t("success.startOver")}</Button>
                  </CardContent>
             </Card>
         )}
