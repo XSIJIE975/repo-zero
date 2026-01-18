@@ -47,9 +47,9 @@ function App() {
         directory: true,
         multiple: false,
       });
-      if (selected && typeof selected === "string") {
+      if (selected) {
         setRepoPath(selected);
-        analyzeRepo(selected);
+        await analyzeRepo(selected);
       }
     } catch (e) {
       console.error("Dialog failed", e);
