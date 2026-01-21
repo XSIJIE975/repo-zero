@@ -13,6 +13,7 @@ tauri = { version = "2.0.0", features = [] }
 tauri-plugin-shell = "2.0.0"
 tauri-plugin-dialog = "2.0.0"
 tauri-plugin-fs = "2.0.0"
+tauri-plugin-store = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 git2 = { version = "0.19", default-features = false } # Optional, can be removed if strictly using shell
