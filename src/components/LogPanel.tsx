@@ -4,7 +4,6 @@ import {
   ChevronUp,
   Copy,
   Filter,
-  TerminalSquare,
   Trash2,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
@@ -12,20 +11,8 @@ import { useTranslation } from "react-i18next"
 import {
   Button,
   cn,
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui"
-import {
-  clearLogs,
-  configureConsoleMirror,
-  getLogSnapshot,
-  type LogLevel,
-  subscribeLogs,
-} from "@/lib/logStore"
+import { clearLogs, getLogSnapshot, type LogLevel, subscribeLogs } from "@/lib/logStore"
 
 interface LogPanelProps {
   isOpen?: boolean
@@ -34,7 +21,7 @@ interface LogPanelProps {
 }
 
 export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPanelProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   const isControlled = externalIsOpen !== undefined
   const open = isControlled ? externalIsOpen : internalIsOpen
@@ -43,11 +30,81 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
   const logs = snapshot.entries
 
   const [autoScroll, setAutoScroll] = useState(true)
-  const [mirrorToConsole, setMirrorToConsole] = useState(import.meta.env.DEV)
-  const [mirrorLevels, setMirrorLevels] = useState<LogLevel[]>(["error", "warn"])
   const [filterText, setFilterText] = useState("")
   const [levelFilter, setLevelFilter] = useState<LogLevel | "all">("all")
-  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+
+  // Resizable logic
+  const MIN_PANEL_HEIGHT = 180
+  const MAX_PANEL_HEIGHT_PADDING = 120
+  const DEFAULT_PANEL_HEIGHT_RATIO = 0.3
+  const MAX_PANEL_HEIGHT_RATIO = 0.8
+
+  const getMaxPanelHeight = () => {
+    const byRatio = Math.round(window.innerHeight * MAX_PANEL_HEIGHT_RATIO)
+    const byPadding = Math.max(MIN_PANEL_HEIGHT, window.innerHeight - MAX_PANEL_HEIGHT_PADDING)
+    return Math.min(byRatio, byPadding)
+  }
+
+  const clampPanelHeight = (height: number) => {
+    const max = getMaxPanelHeight()
+    return Math.max(MIN_PANEL_HEIGHT, Math.min(height, max))
+  }
+
+  const [panelHeight, setPanelHeight] = useState(() => {
+    if (typeof window === "undefined") return 320
+    return clampPanelHeight(Math.round(window.innerHeight * DEFAULT_PANEL_HEIGHT_RATIO))
+  })
+  const [isDragging, setIsDragging] = useState(false)
+  const draggingRef = useRef(false)
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!open) return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setIsDragging(true)
+    draggingRef.current = true
+  }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return
+    const newHeight = window.innerHeight - e.clientY
+    setPanelHeight(clampPanelHeight(newHeight))
+  }
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false)
+    draggingRef.current = false
+    e.currentTarget.releasePointerCapture(e.pointerId)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    setPanelHeight((prev) => clampPanelHeight(prev))
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const onResize = () => setPanelHeight((prev) => clampPanelHeight(prev))
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [open])
+
+  const renderMessage = (raw: string) => {
+    const trimmed = raw.trim()
+    if (!trimmed.startsWith("I18N:")) return raw
+
+    const rest = trimmed.slice("I18N:".length)
+    const [key, argsRaw] = rest.split("|", 2)
+    if (!key) return raw
+
+    if (!argsRaw) return t(key)
+    try {
+      const parsed = JSON.parse(argsRaw) as Record<string, unknown>
+      return t(key, parsed)
+    } catch {
+      return t(key)
+    }
+  }
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
@@ -66,32 +123,52 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
     }
   }, [logs, autoScroll, open])
 
-  useEffect(() => {
-    if (!import.meta.env.DEV) return
-    configureConsoleMirror({
-      enabled: mirrorToConsole,
-      levels: new Set(mirrorLevels),
-    })
-  }, [mirrorToConsole, mirrorLevels])
-
-  const categories = useMemo(() => {
-    const set = new Set<string>()
-    for (const e of logs) set.add(e.category)
-    return Array.from(set).sort((a, b) => a.localeCompare(b))
-  }, [logs])
-
   const filteredLogs = useMemo(() => {
-    const needle = filterText.trim().toLowerCase()
+    const needle = filterText.trim()
+
+    const normalize = (s: string) => s.toLocaleLowerCase("en-US")
+
+    // Fuzzy match that supports:
+    // - case-insensitive matching (for English)
+    // - substring match
+    // - subsequence match ("fuzzy" typing: e.g. "clr" matches "clear")
+    // - multi-token AND match when input contains spaces
+    const isSubsequence = (pattern: string, text: string) => {
+      if (!pattern) return true
+      let i = 0
+      for (let j = 0; j < text.length && i < pattern.length; j++) {
+        if (text[j] === pattern[i]) i++
+      }
+      return i === pattern.length
+    }
+
+    const fuzzyMatch = (pattern: string, text: string) => {
+      const p = normalize(pattern)
+      const t = normalize(text)
+      if (!p) return true
+      return t.includes(p) || isSubsequence(p, t)
+    }
+
+    const tokens = needle.split(/\s+/).filter(Boolean)
+
+    // Pre-render messages once per language + logs snapshot.
+    const renderedByRaw = new Map<string, string>()
+    for (const e of logs) {
+      if (!renderedByRaw.has(e.message)) {
+        renderedByRaw.set(e.message, renderMessage(e.message))
+      }
+    }
 
     return logs.filter((e) => {
       if (levelFilter !== "all" && e.level !== levelFilter) return false
-      if (categoryFilter !== "all" && e.category !== categoryFilter) return false
 
-      if (!needle) return true
-      const msg = e.message.toLowerCase()
-      return msg.includes(needle) || e.category.toLowerCase().includes(needle)
+      if (tokens.length === 0) return true
+
+      // Only match against the user-visible (rendered) message.
+      const rendered = renderedByRaw.get(e.message) ?? ""
+      return tokens.every((tok) => fuzzyMatch(tok, rendered))
     })
-  }, [logs, filterText, levelFilter, categoryFilter])
+  }, [logs, filterText, levelFilter, i18n.language, i18n.resolvedLanguage])
 
   const getLogColor = (level: LogLevel) => {
     if (level === "error") return "text-red-500 dark:text-red-400"
@@ -116,21 +193,9 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
     { id: "debug", label: t("log_panel.level.debug") },
   ]
 
-  const mirrorLevelOptions: Array<{ id: LogLevel; label: string }> = [
-    { id: "error", label: t("log_panel.level.error") },
-    { id: "warn", label: t("log_panel.level.warn") },
-    { id: "info", label: t("log_panel.level.info") },
-    { id: "debug", label: t("log_panel.level.debug") },
-  ]
-
-  const toggleMirrorLevel = (lvl: LogLevel) => {
-    setMirrorLevels((prev) =>
-      prev.includes(lvl) ? prev.filter((x) => x !== lvl) : [...prev, lvl]
-    )
-  }
-
   const formatEntryForCopy = (entry: (typeof logs)[number]) => {
-    const base = `[${formatTime(entry.ts)}] [${entry.level.toUpperCase()}] [${entry.category}] ${entry.message}`
+    const msg = renderMessage(entry.message)
+    const base = `[${formatTime(entry.ts)}] [${entry.level.toUpperCase()}] [${entry.category}] ${msg}`
     if (!entry.data) return base
     const dataStr =
       typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data, null, 2)
@@ -165,12 +230,23 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
 
       {/* Main Panel */}
       <div
+        style={{ height: open ? panelHeight : 0 }}
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border shadow-2xl transition-all duration-300 ease-in-out flex flex-col font-mono",
-          open ? "h-[30vh]" : "h-0",
+          "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border shadow-2xl flex flex-col font-mono",
+          isDragging ? "transition-none" : "transition-[height] duration-300 ease-in-out",
           className
         )}
       >
+        {/* Resize Handle */}
+        <div
+          className="absolute top-0 left-0 right-0 h-1.5 -mt-0.5 cursor-ns-resize z-50 hover:bg-primary/50 transition-colors touch-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          title={t("log_panel.resize_tooltip")}
+        />
+
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
@@ -195,20 +271,6 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
               <Filter className="absolute right-2 top-1.5 h-3 w-3 text-muted-foreground pointer-events-none" />
             </div>
 
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-background border border-input text-foreground text-xs rounded px-2 py-1 outline-none focus:border-primary"
-              title={t("log_panel.category.label")}
-            >
-              <option value="all">{t("log_panel.category.all")}</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-
             <div className="hidden sm:flex items-center gap-1 ml-2">
               {levelTabs.map((tab) => (
                 <button
@@ -226,45 +288,6 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
                 </button>
               ))}
             </div>
-
-            {import.meta.env.DEV && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-7 w-7 rounded hover:bg-accent",
-                      mirrorToConsole ? "text-primary" : "text-muted-foreground"
-                    )}
-                    title={t("log_panel.console_mirror.tooltip")}
-                  >
-                    <TerminalSquare className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52 mb-2">
-                  <DropdownMenuLabel>{t("log_panel.console_mirror.title")}</DropdownMenuLabel>
-                  <DropdownMenuCheckboxItem
-                    checked={mirrorToConsole}
-                    onCheckedChange={(checked) => setMirrorToConsole(Boolean(checked))}
-                  >
-                    {t("log_panel.console_mirror.enabled")}
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t("log_panel.console_mirror.levels")}</DropdownMenuLabel>
-                  {mirrorLevelOptions.map((opt) => (
-                    <DropdownMenuCheckboxItem
-                      key={opt.id}
-                      checked={mirrorLevels.includes(opt.id)}
-                      onCheckedChange={() => toggleMirrorLevel(opt.id)}
-                      disabled={!mirrorToConsole}
-                    >
-                      {opt.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
 
             <Button
               variant="ghost"
@@ -325,10 +348,10 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
                   <span className="text-muted-foreground select-none w-16 text-right shrink-0 opacity-70">
                     {formatTime(log.ts)}
                   </span>
-                  <span className={cn("break-all flex-1", getLogColor(log.level))}>
-                    <span className="opacity-60 mr-1 text-foreground">[{log.category}]</span>
-                    {log.message}
-                  </span>
+                    <span className={cn("break-all flex-1", getLogColor(log.level))}>
+                      <span className="opacity-60 mr-1 text-foreground">[{log.category}]</span>
+                      {renderMessage(log.message)}
+                    </span>
                   <button
                     onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
                     className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"

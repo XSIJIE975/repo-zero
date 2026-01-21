@@ -18,11 +18,6 @@ let entries: LogEntry[] = []
 let snapshot: LogSnapshot = { entries }
 let listeners = new Set<() => void>()
 
-let consoleMirror = {
-  enabled: false,
-  levels: new Set<LogLevel>(["error", "warn"]),
-}
-
 function emitChange() {
   for (const l of listeners) l()
 }
@@ -58,27 +53,7 @@ export function addLog(entry: Omit<LogEntry, "ts"> & { ts?: number }) {
 
   snapshot = { entries }
 
-  if (consoleMirror.enabled && consoleMirror.levels.has(full.level)) {
-    const tag = `[${full.category}]`
-    const payload = full.data !== undefined ? [tag, full.message, full.data] : [tag, full.message]
-
-    if (full.level === "error") console.error(...payload)
-    else if (full.level === "warn") console.warn(...payload)
-    else if (full.level === "debug") console.debug(...payload)
-    else console.info(...payload)
-  }
-
   emitChange()
-}
-
-export function configureConsoleMirror(opts: {
-  enabled: boolean
-  levels: Set<LogLevel>
-}) {
-  consoleMirror = {
-    enabled: opts.enabled,
-    levels: new Set(opts.levels),
-  }
 }
 
 export function logInfo(category: string, message: string, data?: unknown) {

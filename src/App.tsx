@@ -1,12 +1,25 @@
-import { useState, useEffect, useSyncExternalStore, useMemo } from "react";
-import { FolderOpen, Terminal, AlertTriangle, CheckCircle, Loader2, GitBranch, Trash2 } from "lucide-react";
-import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input } from "@/components/ui";
+import { useState, useEffect } from "react";
+import { FolderOpen, Terminal, AlertTriangle, CheckCircle, Loader2, GitBranch, Trash2, ChevronDown, RotateCcw, XCircle } from "lucide-react";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  Input,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui";
 import { HeaderControls } from "@/components/HeaderControls";
 import { LogPanel } from "@/components/LogPanel";
 
 import { useTranslation } from "react-i18next";
 
-import { addLog, getLogSnapshot, parseLogEvent, subscribeLogs } from "@/lib/logStore";
+import { addLog, parseLogEvent } from "@/lib/logStore";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -21,6 +34,9 @@ interface RepoInfo {
   branch_count: number;
   tag_count: number;
   size_human: string;
+  detected_default_branch: string | null;
+  default_branch_candidates: string[];
+  requires_default_branch_choice: boolean;
 }
 
 function App() {
@@ -30,14 +46,8 @@ function App() {
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [confirmText, setConfirmText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const logSnapshot = useSyncExternalStore(subscribeLogs, getLogSnapshot, getLogSnapshot);
-
-  const execLogs = useMemo(() => {
-    return logSnapshot.entries
-      .filter((e) => e.category === "tauri" || e.category === "execute")
-      .map((e) => (e.level === "error" ? `ERROR: ${e.message}` : e.message));
-  }, [logSnapshot.entries]);
+  const [targetBranch, setTargetBranch] = useState<string>("");
+  const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -71,6 +81,13 @@ function App() {
     try {
       const info = await invoke<RepoInfo>("scan_repo", { path });
       setRepoInfo(info);
+      // Pick a sensible default for the target branch.
+      const inferred =
+        info.detected_default_branch ??
+        (info.default_branch_candidates.length === 1
+          ? info.default_branch_candidates[0]
+          : "");
+      setTargetBranch(inferred);
       setStep("analyze");
     } catch (err) {
       console.error(err);
@@ -80,22 +97,51 @@ function App() {
     }
   };
 
+
   const handleExecute = async () => {
+    setIsProcessing(true);
     setStep("execute");
-    addLog({ level: "info", category: "execute", message: t("execute.startingCleanup") });
-    addLog({ level: "info", category: "execute", message: t("execute.pleaseWait") });
+    setIsLogPanelOpen(true); // Automatically open logs on start
+    addLog({ level: "info", category: "execute", message: "I18N:execute.startingCleanup" });
+    addLog({ level: "info", category: "execute", message: "I18N:execute.pleaseWait" });
+
+    const formatInvokeError = (err: unknown) => {
+      const raw = String(err);
+      const idx = raw.indexOf("I18N:");
+      return idx >= 0 ? raw.slice(idx).trim() : raw;
+    };
 
     try {
-      await invoke("execute_reset", { path: repoPath });
+      await invoke("execute_reset", { path: repoPath, targetBranch });
       setStep("success");
     } catch (err) {
-      addLog({ level: "error", category: "execute", message: String(err) });
+      addLog({ level: "error", category: "execute", message: formatInvokeError(err) });
+      // Stay on the execute screen so user can review logs.
+      // The LogPanel is always available for deeper inspection.
+    } finally {
+      setIsProcessing(false);
     }
+  };
+
+  const handleStartOver = () => {
+    // Avoid full reload so global app state (e.g. language) is preserved.
+    setIsLogPanelOpen(false);
+    setRepoPath("");
+    setRepoInfo(null);
+    setConfirmText("");
+    setIsProcessing(false);
+    setTargetBranch("");
+    setStep("connect");
+    addLog({
+      level: "info",
+      category: "execute",
+      message: "I18N:success.startOver",
+    });
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative">
-      <LogPanel />
+      <LogPanel isOpen={isLogPanelOpen} onToggle={setIsLogPanelOpen} />
       <HeaderControls />
       <div className="w-full max-w-2xl">
         <div className="mb-8 text-center space-y-2">
@@ -169,6 +215,47 @@ function App() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {repoInfo && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          {t("danger.targetBranch.label")}
+                        </label>
+                         <div className="flex gap-2">
+                           <Input
+                             value={targetBranch}
+                             onChange={(e) => setTargetBranch(e.target.value)}
+                             placeholder={t("danger.targetBranch.placeholder")}
+                             className="flex-1"
+                           />
+                           {repoInfo.default_branch_candidates.length > 1 && (
+                             <DropdownMenu>
+                               <DropdownMenuTrigger asChild>
+                                 <Button
+                                   variant="outline"
+                                   size="icon"
+                                   className="shrink-0"
+                                   aria-label={t("danger.targetBranch.dropdownLabel")}
+                                 >
+                                   <ChevronDown className="h-4 w-4" />
+                                 </Button>
+                               </DropdownMenuTrigger>
+                               <DropdownMenuContent align="end">
+                                 {repoInfo.default_branch_candidates.map((c) => (
+                                   <DropdownMenuItem key={c} onClick={() => setTargetBranch(c)}>
+                                     {c}
+                                   </DropdownMenuItem>
+                                 ))}
+                               </DropdownMenuContent>
+                             </DropdownMenu>
+                           )}
+                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          {repoInfo.requires_default_branch_choice
+                            ? t("danger.targetBranch.hint.required")
+                            : t("danger.targetBranch.hint.detected")}
+                        </p>
+                      </div>
+                    )}
                     <div className="space-y-2">
                         <label className="text-sm font-medium">
                             {t("danger.confirmPrefix")} <span className="font-mono font-bold select-all">{t("danger.confirmPhrase")}</span> {t("danger.confirmSuffix")}
@@ -185,7 +272,7 @@ function App() {
                     <Button variant="ghost" onClick={() => setStep("analyze")}>{t("danger.cancel")}</Button>
                     <Button 
                         variant="destructive" 
-                        disabled={confirmText !== "nuclear reset"}
+                        disabled={confirmText !== "nuclear reset" || targetBranch.trim().length === 0}
                         onClick={handleExecute}
                     >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -196,20 +283,64 @@ function App() {
         )}
 
         {step === "execute" && (
-            <Card className="bg-black text-green-500 border-zinc-800 font-mono">
-                <CardHeader className="border-b border-zinc-800 pb-2">
-                    <CardTitle className="text-sm flex items-center">
-                        <Terminal className="mr-2 h-4 w-4" />
-                        {t("execute.title")}
+            <Card className={isProcessing ? "border-primary/20" : "border-destructive/50"}>
+                <CardHeader>
+                    <CardTitle className="flex items-center">
+                        {isProcessing ? (
+                           <>
+                             <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
+                             {t("execute.status.running")}
+                           </>
+                        ) : (
+                           <>
+                             <XCircle className="mr-2 h-5 w-5 text-destructive" />
+                             <span className="text-destructive">{t("execute.status.failed")}</span>
+                           </>
+                        )}
                     </CardTitle>
+                    {!isProcessing && (
+                      <CardDescription>
+                         {t("execute.status.failedDesc")}
+                      </CardDescription>
+                    )}
                 </CardHeader>
-                <CardContent className="p-0">
-                    <div className="h-64 overflow-y-auto p-4 space-y-1 text-xs">
-                        {execLogs.map((log, i) => (
-                            <div key={i}>&gt; {log}</div>
-                        ))}
-                    </div>
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                   {/* Visual indicator of state */}
+                   <div className="h-24 w-24 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                      {isProcessing ? (
+                        <Terminal className="h-10 w-10 text-muted-foreground animate-pulse" />
+                      ) : (
+                        <AlertTriangle className="h-10 w-10 text-destructive" />
+                      )}
+                   </div>
+                   
+                   <Button
+                      variant="outline"
+                      onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
+                      className="mt-2"
+                   >
+                      <Terminal className="mr-2 h-4 w-4" />
+                      {isLogPanelOpen ? t("app.hideLogs") : t("execute.viewLogs")}
+                   </Button>
                 </CardContent>
+                <CardFooter className="flex justify-between bg-muted/20">
+                    <Button 
+                      variant="ghost" 
+                      onClick={handleStartOver}
+                      disabled={isProcessing}
+                    >
+                      <FolderOpen className="mr-2 h-4 w-4" />
+                      {t("execute.startOver")}
+                    </Button>
+                    <Button 
+                      variant="default"
+                      onClick={handleExecute}
+                      disabled={isProcessing}
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {t("execute.retry")}
+                    </Button>
+                </CardFooter>
             </Card>
         )}
 
@@ -225,11 +356,24 @@ function App() {
                     </CardDescription>
                 </CardHeader>
                  <CardContent>
-                    <p className="mb-4">
-                        {t("success.remoteCleanNote")}
-                    </p>
-                    <Button onClick={() => window.location.reload()} variant="outline">{t("success.startOver")}</Button>
-                 </CardContent>
+                     <p className="mb-4">
+                         {t("success.remoteCleanNote")}
+                     </p>
+                     <div className="flex gap-2">
+                       <Button
+                         onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
+                         variant="outline"
+                       >
+                         {isLogPanelOpen ? t("app.hideLogs") : t("success.viewLogs")}
+                       </Button>
+                     <Button
+                       onClick={handleStartOver}
+                       variant="outline"
+                     >
+                       {t("success.startOver")}
+                     </Button>
+                     </div>
+                  </CardContent>
             </Card>
         )}
       </div>
