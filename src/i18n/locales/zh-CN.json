@@ -1,6 +1,7 @@
 {
   "app.title": "RepoZero",
   "app.subtitle": "干净、稳妥地重置仓库。",
+  "app.hideLogs": "隐藏日志",
   "selectRepo.title": "选择仓库",
   "selectRepo.desc": "选择你想要重置的 Git 仓库本地目录。",
   "selectRepo.browse": "选择文件夹",
@@ -18,10 +19,17 @@
   "danger.confirmLabel": "请输入 nuclear reset 以确认：",
   "danger.cancel": "取消",
   "danger.execute": "执行重置",
-  "execute.title": "执行日志",
+  "execute.title": "执行状态",
+  "execute.status.running": "执行进行中...",
+  "execute.status.failed": "执行失败",
+  "execute.status.failedDesc": "过程中发生错误。请查看下方日志了解详情。",
+  "execute.viewLogs": "切换日志显示",
+  "execute.retry": "重试",
+  "execute.startOver": "重新开始",
   "success.title": "操作成功",
   "success.desc": "仓库已成功重置。",
   "success.startOver": "重新开始",
+  "success.viewLogs": "查看日志",
   "success.remoteCleanNote": "你的远程仓库现在已清理完成。请通知团队重新克隆仓库。",
 
   "lang.label": "语言",
@@ -31,6 +39,20 @@
   "execute.startingCleanup": "开始清理过程...",
   "execute.pleaseWait": "请稍候...",
 
+  "tauri.readingConfig": "读取配置中...",
+  "tauri.targetRemote": "目标远程：{{remote}}",
+  "tauri.initializingCleanRepo": "正在初始化干净仓库...",
+  "tauri.creatingRootCommit": "正在创建根提交...",
+  "tauri.forcePushing": "正在强制推送到远程（{{branch}}）...",
+  "tauri.fetchingRemoteRefs": "正在获取远程引用用于清理...",
+  "tauri.foundBranchesAndTags": "发现需要删除的分支 {{branches}} 个，标签 {{tags}} 个。",
+  "tauri.deletingBranchBatch": "正在删除一批分支（{{count}} 个）...",
+  "tauri.deletingTagBatch": "正在删除一批标签（{{count}} 个）...",
+  "tauri.warning.batchDeleteFailed": "批量删除分支失败：{{error}}",
+  "tauri.warning.batchDeleteTagsFailed": "批量删除标签失败：{{error}}",
+  "tauri.cleanupComplete": "清理完成。",
+  "tauri.cleanupCompletedWithWarnings": "清理已完成，但存在警告（部分分支/标签可能未删除）。",
+
   "danger.willIntro": "此操作不可逆。它将：",
   "danger.will.history": "永久删除所有历史（提交、日志）。",
   "danger.will.branchesTags": "删除远程上的所有分支和标签。",
@@ -39,6 +61,12 @@
   "danger.confirmSuffix": "以确认：",
   "danger.confirmPhrase": "nuclear reset",
   "danger.confirmPlaceholder": "nuclear reset",
+
+  "danger.targetBranch.label": "重置后的主分支",
+  "danger.targetBranch.placeholder": "例如 main",
+  "danger.targetBranch.dropdownLabel": "选择候选分支",
+  "danger.targetBranch.hint.required": "无法确定唯一的主分支（可能同时存在 main/master，或两者都不存在）。请手动选择或输入要作为重置后主分支的名称。",
+  "danger.targetBranch.hint.detected": "已检测到主分支，如有需要可手动修改。",
 
   "header.lang.english": "英语",
   "header.lang.chinese": "中文",
@@ -67,14 +95,9 @@
   "log_panel.auto_scroll_tooltip": "自动滚动",
   "log_panel.clear_tooltip": "清空日志",
   "log_panel.minimize_tooltip": "最小化",
+  "log_panel.resize_tooltip": "拖动调整高度",
 
-  "log_panel.category.label": "分类",
-  "log_panel.category.all": "全部",
 
-  "log_panel.console_mirror.tooltip": "同步到控制台",
-  "log_panel.console_mirror.title": "控制台同步",
-  "log_panel.console_mirror.enabled": "启用",
-  "log_panel.console_mirror.levels": "级别",
 
   "log_panel.level.all": "全部",
   "log_panel.level.error": "错误",
@@ -82,4 +105,3 @@
   "log_panel.level.info": "信息",
   "log_panel.level.debug": "调试"
 }
-

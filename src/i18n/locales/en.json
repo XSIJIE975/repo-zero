@@ -1,6 +1,7 @@
 {
   "app.title": "RepoZero",
   "app.subtitle": "Reset a repo, cleanly and confidently.",
+  "app.hideLogs": "Hide logs",
   "selectRepo.title": "Select Repository",
   "selectRepo.desc": "Choose the local folder of the git repository you want to reset.",
   "selectRepo.browse": "Browse Folder",
@@ -18,10 +19,17 @@
   "danger.confirmLabel": "Type nuclear reset to confirm:",
   "danger.cancel": "Cancel",
   "danger.execute": "Execute Reset",
-  "execute.title": "Execution Log",
+  "execute.title": "Execution Status",
+  "execute.status.running": "Execution in progress...",
+  "execute.status.failed": "Execution failed",
+  "execute.status.failedDesc": "An error occurred during the process. Check the logs below for details.",
+  "execute.viewLogs": "Toggle Logs",
+  "execute.retry": "Retry",
+  "execute.startOver": "Start Over",
   "success.title": "Operation Successful",
   "success.desc": "The repository has been successfully reset.",
   "success.startOver": "Start Over",
+  "success.viewLogs": "View logs",
   "success.remoteCleanNote": "Your remote repository is now clean. Please inform your team to re-clone the repository.",
 
   "lang.label": "Language",
@@ -31,6 +39,20 @@
   "execute.startingCleanup": "Starting clean up process...",
   "execute.pleaseWait": "Please wait...",
 
+  "tauri.readingConfig": "Reading configuration...",
+  "tauri.targetRemote": "Target Remote: {{remote}}",
+  "tauri.initializingCleanRepo": "Initializing clean repository...",
+  "tauri.creatingRootCommit": "Creating root commit...",
+  "tauri.forcePushing": "Force pushing to origin ({{branch}})...",
+  "tauri.fetchingRemoteRefs": "Fetching remote refs for cleanup...",
+  "tauri.foundBranchesAndTags": "Found {{branches}} branches and {{tags}} tags to delete.",
+  "tauri.deletingBranchBatch": "Deleting batch of {{count}} branches...",
+  "tauri.deletingTagBatch": "Deleting batch of {{count}} tags...",
+  "tauri.warning.batchDeleteFailed": "Batch delete failed: {{error}}",
+  "tauri.warning.batchDeleteTagsFailed": "Batch delete tags failed: {{error}}",
+  "tauri.cleanupComplete": "Cleanup complete.",
+  "tauri.cleanupCompletedWithWarnings": "Cleanup finished with warnings (some branches/tags may not have been deleted).",
+
   "danger.willIntro": "This action is irreversible. It will:",
   "danger.will.history": "Delete ALL history (commits, logs) forever.",
   "danger.will.branchesTags": "Delete ALL branches and tags on remote.",
@@ -39,6 +61,12 @@
   "danger.confirmSuffix": "to confirm:",
   "danger.confirmPhrase": "nuclear reset",
   "danger.confirmPlaceholder": "nuclear reset",
+
+  "danger.targetBranch.label": "Target default branch",
+  "danger.targetBranch.placeholder": "e.g. main",
+  "danger.targetBranch.dropdownLabel": "Select a candidate branch",
+  "danger.targetBranch.hint.required": "We couldn't determine a single default branch. Please choose or input the branch that should become the new default.",
+  "danger.targetBranch.hint.detected": "We detected a default branch. You can change it if needed.",
 
   "header.lang.english": "English",
   "header.lang.chinese": "Chinese",
@@ -67,14 +95,9 @@
   "log_panel.auto_scroll_tooltip": "Auto scroll",
   "log_panel.clear_tooltip": "Clear logs",
   "log_panel.minimize_tooltip": "Minimize",
+  "log_panel.resize_tooltip": "Drag to resize",
 
-  "log_panel.category.label": "Category",
-  "log_panel.category.all": "All",
 
-  "log_panel.console_mirror.tooltip": "Mirror to console",
-  "log_panel.console_mirror.title": "Console mirror",
-  "log_panel.console_mirror.enabled": "Enabled",
-  "log_panel.console_mirror.levels": "Levels",
 
   "log_panel.level.all": "All",
   "log_panel.level.error": "Error",
@@ -82,4 +105,3 @@
   "log_panel.level.info": "Info",
   "log_panel.level.debug": "Debug"
 }
-
