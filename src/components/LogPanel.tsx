@@ -1,11 +1,11 @@
 import {
   ArrowDownCircle,
-  ChevronDown,
   Copy,
   Filter,
   Trash2,
   Search,
-  Activity
+  Activity,
+  Minimize2
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { useTranslation } from "react-i18next"
@@ -172,9 +172,9 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
   }, [logs, filterText, levelFilter, i18n.language, i18n.resolvedLanguage])
 
   const getLogColor = (level: LogLevel) => {
-    if (level === "error") return "text-red-500 dark:text-red-400"
-    if (level === "warn") return "text-yellow-500 dark:text-yellow-400"
-    if (level === "debug") return "text-muted-foreground"
+    if (level === "error") return "text-red-500 dark:text-red-400 font-bold"
+    if (level === "warn") return "text-yellow-500 dark:text-yellow-400 font-medium"
+    if (level === "debug") return "text-muted-foreground italic"
     return "text-blue-500 dark:text-blue-300"
   }
 
@@ -208,21 +208,21 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
       {/* Minimized Toggle Button (Visible when closed) */}
       <div
         className={cn(
-          "fixed bottom-4 right-4 z-50 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; transform",
-          open ? "translate-y-20 opacity-0 pointer-events-none scale-90" : "translate-y-0 opacity-100 scale-100"
+          "fixed bottom-6 right-6 z-50 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb;",
+          open ? "translate-y-24 opacity-0 pointer-events-none scale-75" : "translate-y-0 opacity-100 scale-100"
         )}
       >
         <Button
           onClick={toggleOpen}
-          className="rounded-full h-12 w-12 shadow-xl shadow-black/20 bg-background/80 backdrop-blur-md border border-border/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300 group"
+          className="rounded-full h-14 w-14 shadow-2xl shadow-black/20 bg-background/90 backdrop-blur-xl border border-border/50 hover:bg-primary hover:text-primary-foreground hover:scale-105 transition-all duration-300 group"
           size="icon"
         >
           <div className="relative">
-            <Activity className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
+            <Activity className="h-6 w-6 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
             {logs.length > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-primary border-2 border-background"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-primary border-2 border-background"></span>
               </span>
             )}
           </div>
@@ -233,7 +233,7 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
       <div
         style={{ height: open ? panelHeight : 0 }}
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border/50 shadow-2xl flex flex-col font-mono text-sm",
+          "fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-2xl border-t border-border/50 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col font-mono text-sm",
           isDragging ? "transition-none" : "transition-[height] duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb;",
           className
         )}
@@ -247,101 +247,103 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
           onPointerCancel={handlePointerUp}
           title={t("log_panel.resize_tooltip")}
         >
-            <div className="mx-auto w-16 h-1 rounded-full bg-muted-foreground/20 mt-0.5 group-hover:bg-primary/50 transition-colors" />
+            <div className="mx-auto w-24 h-1 rounded-full bg-muted-foreground/20 mt-0.5 group-hover:bg-primary/50 transition-colors" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border/50 shrink-0 select-none">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-background/50 border border-border/50">
-              <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold text-foreground tracking-wide">
-                {t("log_panel.title")}
-              </span>
+        <div className="flex items-center justify-between px-6 py-3 bg-muted/20 border-b border-border/50 shrink-0 select-none">
+          <div className="flex items-center gap-4">
+             <div className="flex items-center gap-2">
+                 <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center text-primary">
+                    <Activity className="h-4 w-4" />
+                 </div>
+                 <span className="font-bold tracking-tight text-foreground">{t("log_panel.title")}</span>
+             </div>
+             
+             <div className="h-4 w-px bg-border/50 mx-2" />
+
+             <div className="flex items-center gap-2">
+                {levelTabs.map((tab) => (
+                    <button
+                    key={tab.id}
+                    className={cn(
+                        "text-[10px] uppercase font-bold px-3 py-1.5 rounded-full transition-all border border-transparent",
+                        levelFilter === tab.id
+                        ? "bg-foreground text-background shadow-sm scale-105"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-border/30 hover:border-border/80"
+                    )}
+                    onClick={() => setLevelFilter(tab.id)}
+                    type="button"
+                    >
+                    {tab.label}
+                    </button>
+                ))}
             </div>
-            <span className="text-[10px] font-medium text-muted-foreground px-1.5 py-0.5 rounded-full bg-muted/50 border border-border/50 min-w-[20px] text-center">
-              {logs.length}
-            </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative group flex items-center">
-              <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-              <input
-                type="text"
-                value={filterText}
-                onChange={(e) => setFilterText(e.target.value)}
-                placeholder={t("log_panel.filter_placeholder")}
-                className="h-8 bg-background/50 border border-border/50 text-foreground text-xs rounded-md pl-8 pr-3 w-32 focus:w-48 focus:bg-background transition-all outline-none focus:ring-1 focus:ring-primary/20 placeholder:text-muted-foreground/70"
-              />
-            </div>
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/50 rounded-lg focus-within:ring-2 focus-within:ring-primary/20 transition-all w-64 shadow-sm">
+                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                 <input
+                    type="text"
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                    placeholder={t("log_panel.filter_placeholder")}
+                    className="bg-transparent border-none text-xs w-full focus:outline-none placeholder:text-muted-foreground/50"
+                 />
+                 {filterText && (
+                     <button onClick={() => setFilterText("")} className="text-muted-foreground hover:text-foreground">
+                         <Trash2 className="h-3 w-3" />
+                     </button>
+                 )}
+             </div>
 
-            <div className="hidden sm:flex items-center gap-1 bg-muted/20 p-0.5 rounded-md border border-border/50">
-              {levelTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  className={cn(
-                    "text-[10px] uppercase font-semibold px-2.5 py-1 rounded-sm transition-all",
-                    levelFilter === tab.id
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  )}
-                  onClick={() => setLevelFilter(tab.id)}
-                  type="button"
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-px h-4 bg-border/50 mx-1" />
-
-            <div className="flex items-center gap-1">
+             <div className="flex items-center gap-1 pl-2 border-l border-border/50">
                 <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                    "h-8 w-8 rounded-md hover:bg-background/80",
-                    autoScroll ? "text-primary bg-primary/10" : "text-muted-foreground"
-                )}
-                onClick={() => setAutoScroll(!autoScroll)}
-                title={t("log_panel.auto_scroll_tooltip")}
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        "h-8 w-8 rounded-lg hover:bg-background/80 transition-all",
+                        autoScroll ? "text-primary bg-primary/10 ring-1 ring-primary/20" : "text-muted-foreground"
+                    )}
+                    onClick={() => setAutoScroll(!autoScroll)}
+                    title={t("log_panel.auto_scroll_tooltip")}
                 >
-                <ArrowDownCircle className="h-4 w-4" />
+                    <ArrowDownCircle className="h-4 w-4" />
                 </Button>
 
                 <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                onClick={clearLogs}
-                title={t("log_panel.clear_tooltip")}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    onClick={clearLogs}
+                    title={t("log_panel.clear_tooltip")}
                 >
-                <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                 </Button>
 
                 <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-md hover:bg-background/80 text-muted-foreground"
-                onClick={toggleOpen}
-                title={t("log_panel.minimize_tooltip")}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg hover:bg-background/80 text-muted-foreground"
+                    onClick={toggleOpen}
+                    title={t("log_panel.minimize_tooltip")}
                 >
-                <ChevronDown className="h-4 w-4" />
+                    <Minimize2 className="h-4 w-4" />
                 </Button>
-            </div>
+             </div>
           </div>
         </div>
 
         {/* Log Content */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-4 space-y-0.5 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40 transition-colors"
+          className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40 transition-colors bg-black/5"
         >
           {filteredLogs.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-3 opacity-50">
-              <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center border border-border/50">
-                <Filter className="h-6 w-6" />
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 opacity-50">
+              <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center border-2 border-dashed border-muted-foreground/20">
+                <Filter className="h-8 w-8" />
               </div>
               <p className="text-sm font-medium">{t("log_panel.no_logs")}</p>
             </div>
@@ -349,32 +351,49 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
             filteredLogs.map((log, i) => (
               <div
                 key={`${log.ts}-${i}`}
-                className="group flex flex-col gap-1 text-[11px] leading-relaxed hover:bg-muted/30 p-1.5 rounded transition-colors border-l-2 border-transparent hover:border-border/50"
+                className="group flex flex-col text-[11px] leading-relaxed hover:bg-muted/40 p-2 rounded-lg transition-all border border-transparent hover:border-border/30"
               >
-                <div className="flex gap-3 items-baseline">
-                  <span className="text-muted-foreground/50 select-none w-14 text-right shrink-0 font-mono text-[10px]">
+                <div className="flex gap-4 items-baseline relative">
+                   <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
+                        className="text-muted-foreground hover:text-primary p-1.5 hover:bg-background/80 rounded-md shadow-sm border border-border/50 bg-background/50 backdrop-blur-sm"
+                        title={t("log_panel.copy_tooltip")}
+                        type="button"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </button>
+                   </div>
+                  
+                  <span className="text-muted-foreground/40 select-none w-16 text-right shrink-0 font-mono text-[10px] tabular-nums tracking-tighter">
                     {formatTime(log.ts)}
                   </span>
-                    <span className={cn("break-all flex-1 font-mono", getLogColor(log.level))}>
-                      <span className="opacity-50 mr-2 text-foreground/70 uppercase tracking-tighter text-[10px] border border-border/50 px-1 rounded-sm">
-                        {log.category}
+                  
+                  <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                         <span className={cn(
+                             "uppercase tracking-wider text-[9px] font-bold px-1.5 py-0.5 rounded border",
+                             log.level === 'error' ? "bg-red-500/10 border-red-500/20 text-red-500" :
+                             log.level === 'warn' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500" :
+                             log.level === 'info' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
+                             "bg-muted/30 border-muted-foreground/20 text-muted-foreground"
+                         )}>
+                             {log.level}
+                         </span>
+                         <span className="text-[10px] text-muted-foreground/60 font-semibold">{log.category}</span>
+                      </div>
+                      <span className={cn("break-words block font-mono text-xs", getLogColor(log.level))}>
+                        {renderMessage(log.message)}
                       </span>
-                      {renderMessage(log.message)}
-                    </span>
-                  <button
-                    onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-1 hover:bg-background rounded"
-                    title={t("log_panel.copy_tooltip")}
-                    type="button"
-                  >
-                    <Copy className="h-3 w-3" />
-                  </button>
+                  </div>
                 </div>
                 {log.data !== undefined && (
-                  <div className="pl-[4.5rem] pr-8 overflow-hidden">
-                    <pre className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/20 overflow-x-auto">
-                      {typeof log.data === "string" ? log.data : JSON.stringify(log.data, null, 2)}
-                    </pre>
+                  <div className="pl-[5.5rem] mt-2 pr-4">
+                    <div className="bg-background/50 p-3 rounded-lg border border-border/30 overflow-hidden shadow-inner">
+                        <pre className="text-[10px] text-muted-foreground overflow-x-auto font-mono">
+                        {typeof log.data === "string" ? log.data : JSON.stringify(log.data, null, 2)}
+                        </pre>
+                    </div>
                   </div>
                 )}
               </div>
