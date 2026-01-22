@@ -1,10 +1,11 @@
 import {
   ArrowDownCircle,
   ChevronDown,
-  ChevronUp,
   Copy,
   Filter,
   Trash2,
+  Search,
+  Activity
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { useTranslation } from "react-i18next"
@@ -207,21 +208,21 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
       {/* Minimized Toggle Button (Visible when closed) */}
       <div
         className={cn(
-          "fixed bottom-4 right-4 z-50 transition-all duration-300 transform",
-          open ? "translate-y-20 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+          "fixed bottom-4 right-4 z-50 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb; transform",
+          open ? "translate-y-20 opacity-0 pointer-events-none scale-90" : "translate-y-0 opacity-100 scale-100"
         )}
       >
         <Button
           onClick={toggleOpen}
-          className="rounded-full h-12 w-12 shadow-lg bg-background border border-border hover:bg-accent"
+          className="rounded-full h-12 w-12 shadow-xl shadow-black/20 bg-background/80 backdrop-blur-md border border-border/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300 group"
           size="icon"
         >
           <div className="relative">
-            <ChevronUp className="h-6 w-6 text-muted-foreground" />
+            <Activity className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors" />
             {logs.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-primary border-2 border-background"></span>
               </span>
             )}
           </div>
@@ -232,54 +233,58 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
       <div
         style={{ height: open ? panelHeight : 0 }}
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border shadow-2xl flex flex-col font-mono",
-          isDragging ? "transition-none" : "transition-[height] duration-300 ease-in-out",
+          "fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border/50 shadow-2xl flex flex-col font-mono text-sm",
+          isDragging ? "transition-none" : "transition-[height] duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb;",
           className
         )}
       >
         {/* Resize Handle */}
         <div
-          className="absolute top-0 left-0 right-0 h-1.5 -mt-0.5 cursor-ns-resize z-50 hover:bg-primary/50 transition-colors touch-none"
+          className="absolute top-0 left-0 right-0 h-1.5 -mt-0.5 cursor-ns-resize z-50 hover:bg-primary/50 transition-colors touch-none group"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           title={t("log_panel.resize_tooltip")}
-        />
+        >
+            <div className="mx-auto w-16 h-1 rounded-full bg-muted-foreground/20 mt-0.5 group-hover:bg-primary/50 transition-colors" />
+        </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              {t("log_panel.title")}
-            </span>
-            <span className="text-xs text-muted-foreground px-2 py-0.5 rounded bg-muted border border-border">
+        <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border/50 shrink-0 select-none">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-background/50 border border-border/50">
+              <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground tracking-wide">
+                {t("log_panel.title")}
+              </span>
+            </div>
+            <span className="text-[10px] font-medium text-muted-foreground px-1.5 py-0.5 rounded-full bg-muted/50 border border-border/50 min-w-[20px] text-center">
               {logs.length}
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
-            <div className="relative group mr-2">
+          <div className="flex items-center gap-2">
+            <div className="relative group flex items-center">
+              <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
               <input
                 type="text"
                 value={filterText}
                 onChange={(e) => setFilterText(e.target.value)}
                 placeholder={t("log_panel.filter_placeholder")}
-                className="bg-background border border-input text-foreground text-xs rounded pl-2 pr-8 py-1 w-24 focus:w-48 transition-all outline-none focus:border-primary placeholder:text-muted-foreground"
+                className="h-8 bg-background/50 border border-border/50 text-foreground text-xs rounded-md pl-8 pr-3 w-32 focus:w-48 focus:bg-background transition-all outline-none focus:ring-1 focus:ring-primary/20 placeholder:text-muted-foreground/70"
               />
-              <Filter className="absolute right-2 top-1.5 h-3 w-3 text-muted-foreground pointer-events-none" />
             </div>
 
-            <div className="hidden sm:flex items-center gap-1 ml-2">
+            <div className="hidden sm:flex items-center gap-1 bg-muted/20 p-0.5 rounded-md border border-border/50">
               {levelTabs.map((tab) => (
                 <button
                   key={tab.id}
                   className={cn(
-                    "text-[10px] uppercase tracking-wider px-2 py-1 rounded border transition-colors",
+                    "text-[10px] uppercase font-semibold px-2.5 py-1 rounded-sm transition-all",
                     levelFilter === tab.id
-                      ? "bg-primary border-primary text-primary-foreground"
-                      : "bg-background border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                   onClick={() => setLevelFilter(tab.id)}
                   type="button"
@@ -289,72 +294,76 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
               ))}
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-7 w-7 rounded hover:bg-accent",
-                autoScroll ? "text-primary" : "text-muted-foreground"
-              )}
-              onClick={() => setAutoScroll(!autoScroll)}
-              title={t("log_panel.auto_scroll_tooltip")}
-            >
-              <ArrowDownCircle className="h-4 w-4" />
-            </Button>
+            <div className="w-px h-4 bg-border/50 mx-1" />
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded hover:bg-accent text-muted-foreground hover:text-destructive"
-              onClick={clearLogs}
-              title={t("log_panel.clear_tooltip")}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+                <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                    "h-8 w-8 rounded-md hover:bg-background/80",
+                    autoScroll ? "text-primary bg-primary/10" : "text-muted-foreground"
+                )}
+                onClick={() => setAutoScroll(!autoScroll)}
+                title={t("log_panel.auto_scroll_tooltip")}
+                >
+                <ArrowDownCircle className="h-4 w-4" />
+                </Button>
 
-            <div className="w-px h-4 bg-border mx-1" />
+                <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                onClick={clearLogs}
+                title={t("log_panel.clear_tooltip")}
+                >
+                <Trash2 className="h-4 w-4" />
+                </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded hover:bg-accent text-muted-foreground"
-              onClick={toggleOpen}
-              title={t("log_panel.minimize_tooltip")}
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
+                <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-md hover:bg-background/80 text-muted-foreground"
+                onClick={toggleOpen}
+                title={t("log_panel.minimize_tooltip")}
+                >
+                <ChevronDown className="h-4 w-4" />
+                </Button>
+            </div>
           </div>
         </div>
 
         {/* Log Content */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+          className="flex-1 overflow-y-auto p-4 space-y-0.5 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40 transition-colors"
         >
           {filteredLogs.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center border border-border">
-                <Filter className="h-5 w-5 opacity-50" />
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-3 opacity-50">
+              <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center border border-border/50">
+                <Filter className="h-6 w-6" />
               </div>
-              <p className="text-xs">{t("log_panel.no_logs")}</p>
+              <p className="text-sm font-medium">{t("log_panel.no_logs")}</p>
             </div>
           ) : (
             filteredLogs.map((log, i) => (
               <div
                 key={`${log.ts}-${i}`}
-                className="group flex flex-col gap-1 text-xs font-mono hover:bg-muted/50 p-1 rounded -mx-2 px-2 transition-colors border-l-2 border-transparent hover:border-border"
+                className="group flex flex-col gap-1 text-[11px] leading-relaxed hover:bg-muted/30 p-1.5 rounded transition-colors border-l-2 border-transparent hover:border-border/50"
               >
-                <div className="flex gap-3 items-start">
-                  <span className="text-muted-foreground select-none w-16 text-right shrink-0 opacity-70">
+                <div className="flex gap-3 items-baseline">
+                  <span className="text-muted-foreground/50 select-none w-14 text-right shrink-0 font-mono text-[10px]">
                     {formatTime(log.ts)}
                   </span>
-                    <span className={cn("break-all flex-1", getLogColor(log.level))}>
-                      <span className="opacity-60 mr-1 text-foreground">[{log.category}]</span>
+                    <span className={cn("break-all flex-1 font-mono", getLogColor(log.level))}>
+                      <span className="opacity-50 mr-2 text-foreground/70 uppercase tracking-tighter text-[10px] border border-border/50 px-1 rounded-sm">
+                        {log.category}
+                      </span>
                       {renderMessage(log.message)}
                     </span>
                   <button
                     onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary p-1 hover:bg-background rounded"
                     title={t("log_panel.copy_tooltip")}
                     type="button"
                   >
@@ -362,8 +371,8 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
                   </button>
                 </div>
                 {log.data !== undefined && (
-                  <div className="pl-20 pr-4 overflow-hidden">
-                    <pre className="text-[10px] text-muted-foreground bg-muted/30 p-1 rounded overflow-x-auto">
+                  <div className="pl-[4.5rem] pr-8 overflow-hidden">
+                    <pre className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/20 overflow-x-auto">
                       {typeof log.data === "string" ? log.data : JSON.stringify(log.data, null, 2)}
                     </pre>
                   </div>

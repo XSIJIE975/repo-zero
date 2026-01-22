@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FolderOpen, Terminal, AlertTriangle, CheckCircle, Loader2, GitBranch, Trash2, ChevronDown, RotateCcw, XCircle } from "lucide-react";
+import { FolderOpen, Terminal, AlertTriangle, CheckCircle, Loader2, GitBranch, Trash2, ChevronDown, RotateCcw, XCircle, HardDrive, GitCommit, Tag, Clock } from "lucide-react";
 import {
   Button,
   Card,
@@ -140,93 +140,149 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-background via-transparent to-background pointer-events-none" />
+      
       <LogPanel isOpen={isLogPanelOpen} onToggle={setIsLogPanelOpen} />
       <HeaderControls />
-      <div className="w-full max-w-2xl">
-        <div className="mb-8 text-center space-y-2">
-           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
-             <GitBranch className="h-6 w-6 text-primary drop-shadow-[0_1px_0_hsl(var(--background))] dark:drop-shadow-[0_1px_0_rgba(255,255,255,0.15)]" />
+      
+      <div className="w-full max-w-xl z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="mb-10 text-center space-y-4">
+           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20 shadow-lg mb-2">
+             <GitBranch className="h-8 w-8 text-primary drop-shadow-sm" />
            </div>
-           <h1 className="text-3xl font-bold tracking-tight">{t("app.title")}</h1>
-           <p className="text-muted-foreground">{t("app.subtitle")}</p>
+           <div>
+             <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/70">{t("app.title")}</h1>
+             <p className="text-muted-foreground text-lg mt-2">{t("app.subtitle")}</p>
+           </div>
         </div>
 
         {step === "connect" && (
-            <Card>
-                <CardHeader>
-                    <CardTitle>{t("selectRepo.title")}</CardTitle>
+            <Card className="border-border/50 shadow-xl shadow-black/5 overflow-hidden backdrop-blur-sm bg-card/95">
+                <CardHeader className="text-center pb-2">
+                    <CardTitle className="text-xl">{t("selectRepo.title")}</CardTitle>
                     <CardDescription>{t("selectRepo.desc")}</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
-                    <Button size="lg" onClick={handleSelectFolder} disabled={isProcessing}>
-                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderOpen className="mr-2 h-4 w-4" />}
-                        {isProcessing ? t("selectRepo.analyzing") : t("selectRepo.browse")}
+                <CardContent className="flex flex-col items-center justify-center py-10 px-6">
+                    <Button 
+                      variant="outline"
+                      size="lg" 
+                      onClick={handleSelectFolder} 
+                      disabled={isProcessing}
+                      className="w-full h-32 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 flex flex-col gap-3 rounded-xl group"
+                    >
+                        {isProcessing ? (
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        ) : (
+                          <FolderOpen className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors group-hover:scale-110 duration-300" />
+                        )}
+                        <span className="text-lg font-medium text-muted-foreground group-hover:text-foreground">
+                          {isProcessing ? t("selectRepo.analyzing") : t("selectRepo.browse")}
+                        </span>
                     </Button>
                 </CardContent>
             </Card>
         )}
 
         {step === "analyze" && repoInfo && (
-            <Card>
-                <CardHeader>
-                    <CardTitle>{t("analysis.title")}</CardTitle>
+            <Card className="border-border/50 shadow-xl shadow-black/5 overflow-hidden backdrop-blur-sm bg-card/95">
+                <CardHeader className="border-b border-border/50 bg-muted/30 pb-6">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <HardDrive className="w-5 h-5 text-primary" />
+                      {t("analysis.title")}
+                    </CardTitle>
                     <CardDescription>{t("analysis.desc")}</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
-                    <div className="p-4 border rounded-lg">
-                        <div className="text-sm font-medium text-muted-foreground">{t("analysis.remoteUrl")}</div>
-                        <div className="font-mono text-sm truncate">{repoInfo.remote_url}</div>
-                    </div>
-                    <div className="p-4 border rounded-lg">
-                        <div className="text-sm font-medium text-muted-foreground">{t("analysis.currentSize")}</div>
-                        <div className="text-xl font-bold">{repoInfo.size_human}</div>
-                    </div>
-                    <div className="p-4 border rounded-lg">
-                        <div className="text-sm font-medium text-muted-foreground">{t("analysis.branches")}</div>
-                        <div className="text-xl font-bold">{repoInfo.branch_count}</div>
-                    </div>
-                    <div className="p-4 border rounded-lg">
-                        <div className="text-sm font-medium text-muted-foreground">{t("analysis.tags")}</div>
-                        <div className="text-xl font-bold">{repoInfo.tag_count}</div>
+                <CardContent className="p-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2 p-4 border rounded-lg bg-background/50 hover:bg-background transition-colors">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t("analysis.remoteUrl")}</div>
+                            <div className="font-mono text-sm truncate text-foreground/90">{repoInfo.remote_url || "No remote detected"}</div>
+                        </div>
+                        <div className="p-4 border rounded-lg bg-background/50 hover:bg-background transition-colors">
+                            <div className="flex items-center gap-2 mb-2">
+                                <HardDrive className="w-4 h-4 text-muted-foreground" />
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("analysis.currentSize")}</div>
+                            </div>
+                            <div className="text-2xl font-bold font-mono tracking-tight">{repoInfo.size_human}</div>
+                        </div>
+                        <div className="p-4 border rounded-lg bg-background/50 hover:bg-background transition-colors">
+                             <div className="flex items-center gap-2 mb-2">
+                                <GitBranch className="w-4 h-4 text-muted-foreground" />
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("analysis.branches")}</div>
+                            </div>
+                            <div className="text-2xl font-bold font-mono tracking-tight">{repoInfo.branch_count}</div>
+                        </div>
+                        <div className="p-4 border rounded-lg bg-background/50 hover:bg-background transition-colors">
+                             <div className="flex items-center gap-2 mb-2">
+                                <Tag className="w-4 h-4 text-muted-foreground" />
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("analysis.tags")}</div>
+                            </div>
+                            <div className="text-2xl font-bold font-mono tracking-tight">{repoInfo.tag_count}</div>
+                        </div>
+                         {/* Placeholder for future metric */}
+                         <div className="p-4 border rounded-lg bg-background/50 hover:bg-background transition-colors opacity-50">
+                             <div className="flex items-center gap-2 mb-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Est. Time</div>
+                            </div>
+                            <div className="text-lg font-bold font-mono tracking-tight text-muted-foreground">--:--</div>
+                        </div>
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                    <Button variant="ghost" onClick={() => setStep("connect")}>{t("analysis.back")}</Button>
-                    <Button onClick={() => setStep("confirm")}>{t("analysis.next")}</Button>
+                <CardFooter className="flex justify-between bg-muted/30 p-6 border-t border-border/50">
+                    <Button variant="ghost" onClick={() => setStep("connect")} className="hover:bg-background">{t("analysis.back")}</Button>
+                    <Button onClick={() => setStep("confirm")} className="shadow-sm">{t("analysis.next")}</Button>
                 </CardFooter>
             </Card>
         )}
 
         {step === "confirm" && (
-            <Card className="border-destructive/50">
-                <CardHeader>
-                    <CardTitle className="text-destructive flex items-center">
-                        <AlertTriangle className="mr-2 h-5 w-5" />
+            <Card className="border-destructive/40 shadow-xl shadow-destructive/5 overflow-hidden backdrop-blur-sm bg-card/95">
+                <CardHeader className="bg-destructive/5 border-b border-destructive/10 pb-6">
+                    <CardTitle className="text-destructive flex items-center text-xl">
+                        <AlertTriangle className="mr-3 h-6 w-6" />
                         {t("danger.title")}
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-destructive/80 mt-2">
                         {t("danger.willIntro")}
-                        <ul className="list-disc list-inside mt-2 space-y-1">
-                            <li>{t("danger.will.history")}</li>
-                            <li>{t("danger.will.branchesTags")}</li>
-                            <li>{t("danger.will.forcePush")}</li>
-                        </ul>
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6 p-6">
+                    <div className="bg-destructive/5 p-4 rounded-lg border border-destructive/10 text-sm text-destructive/90">
+                        <ul className="space-y-2 list-none">
+                            <li className="flex items-start gap-2">
+                                <span className="block mt-1.5 w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+                                {t("danger.will.history")}
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="block mt-1.5 w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+                                {t("danger.will.branchesTags")}
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="block mt-1.5 w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+                                {t("danger.will.forcePush")}
+                            </li>
+                        </ul>
+                    </div>
+
                     {repoInfo && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
+                      <div className="space-y-3">
+                        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           {t("danger.targetBranch.label")}
                         </label>
                          <div className="flex gap-2">
-                           <Input
-                             value={targetBranch}
-                             onChange={(e) => setTargetBranch(e.target.value)}
-                             placeholder={t("danger.targetBranch.placeholder")}
-                             className="flex-1"
-                           />
+                           <div className="relative flex-1">
+                               <GitBranch className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                               <Input
+                                 value={targetBranch}
+                                 onChange={(e) => setTargetBranch(e.target.value)}
+                                 placeholder={t("danger.targetBranch.placeholder")}
+                                 className="pl-9 font-mono bg-background"
+                               />
+                           </div>
                            {repoInfo.default_branch_candidates.length > 1 && (
                              <DropdownMenu>
                                <DropdownMenuTrigger asChild>
@@ -241,7 +297,7 @@ function App() {
                                </DropdownMenuTrigger>
                                <DropdownMenuContent align="end">
                                  {repoInfo.default_branch_candidates.map((c) => (
-                                   <DropdownMenuItem key={c} onClick={() => setTargetBranch(c)}>
+                                   <DropdownMenuItem key={c} onClick={() => setTargetBranch(c)} className="font-mono">
                                      {c}
                                    </DropdownMenuItem>
                                  ))}
@@ -249,31 +305,34 @@ function App() {
                              </DropdownMenu>
                            )}
                          </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[10px] text-muted-foreground/80 flex items-center gap-1.5">
+                          <GitCommit className="h-3 w-3" />
                           {repoInfo.requires_default_branch_choice
                             ? t("danger.targetBranch.hint.required")
                             : t("danger.targetBranch.hint.detected")}
                         </p>
                       </div>
                     )}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                            {t("danger.confirmPrefix")} <span className="font-mono font-bold select-all">{t("danger.confirmPhrase")}</span> {t("danger.confirmSuffix")}
+
+                    <div className="space-y-3 pt-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                            {t("danger.confirmPrefix")} <span className="font-mono font-bold select-all text-destructive">{t("danger.confirmPhrase")}</span> {t("danger.confirmSuffix")}
                         </label>
                         <Input 
                             value={confirmText} 
                             onChange={(e) => setConfirmText(e.target.value)} 
                             placeholder={t("danger.confirmPlaceholder")}
-                            className="border-destructive/30 focus-visible:ring-destructive"
+                            className="border-destructive/30 focus-visible:ring-destructive bg-destructive/5 font-mono placeholder:text-destructive/30 text-destructive font-medium"
                         />
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                    <Button variant="ghost" onClick={() => setStep("analyze")}>{t("danger.cancel")}</Button>
+                <CardFooter className="flex justify-between bg-destructive/5 p-6 border-t border-destructive/10">
+                    <Button variant="ghost" onClick={() => setStep("analyze")} className="hover:bg-destructive/10 hover:text-destructive">{t("danger.cancel")}</Button>
                     <Button 
                         variant="destructive" 
                         disabled={confirmText !== "nuclear reset" || targetBranch.trim().length === 0}
                         onClick={handleExecute}
+                        className="shadow-lg shadow-destructive/20"
                     >
                         <Trash2 className="mr-2 h-4 w-4" />
                         {t("danger.execute")}
@@ -283,95 +342,101 @@ function App() {
         )}
 
         {step === "execute" && (
-            <Card className={isProcessing ? "border-primary/20" : "border-destructive/50"}>
-                <CardHeader>
-                    <CardTitle className="flex items-center">
+            <Card className={`overflow-hidden backdrop-blur-sm bg-card/95 transition-all duration-500 ${isProcessing ? "border-primary/20 shadow-primary/5 shadow-xl" : "border-destructive/40 shadow-destructive/10 shadow-xl"}`}>
+                <CardHeader className="text-center pb-2">
+                    <CardTitle className="flex items-center justify-center text-xl">
                         {isProcessing ? (
-                           <>
-                             <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
-                             {t("execute.status.running")}
-                           </>
+                           <div className="flex flex-col items-center gap-2">
+                             <span className="text-primary">{t("execute.status.running")}</span>
+                           </div>
                         ) : (
-                           <>
-                             <XCircle className="mr-2 h-5 w-5 text-destructive" />
-                             <span className="text-destructive">{t("execute.status.failed")}</span>
-                           </>
+                           <div className="flex flex-col items-center gap-2 text-destructive">
+                             <span className="flex items-center gap-2"><XCircle className="h-5 w-5" /> {t("execute.status.failed")}</span>
+                           </div>
                         )}
                     </CardTitle>
                     {!isProcessing && (
-                      <CardDescription>
+                      <CardDescription className="text-destructive/80 font-medium mt-1">
                          {t("execute.status.failedDesc")}
                       </CardDescription>
                     )}
                 </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center py-8">
-                   {/* Visual indicator of state */}
-                   <div className="h-24 w-24 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                <CardContent className="flex flex-col items-center justify-center py-10">
+                   <div className={`relative h-28 w-28 rounded-full flex items-center justify-center mb-8 ${isProcessing ? "bg-primary/10 ring-1 ring-primary/20" : "bg-destructive/10 ring-1 ring-destructive/20"}`}>
                       {isProcessing ? (
-                        <Terminal className="h-10 w-10 text-muted-foreground animate-pulse" />
+                        <>
+                            <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                            <Terminal className="h-10 w-10 text-primary animate-pulse" />
+                        </>
                       ) : (
-                        <AlertTriangle className="h-10 w-10 text-destructive" />
+                        <AlertTriangle className="h-12 w-12 text-destructive" />
                       )}
                    </div>
                    
                    <Button
                       variant="outline"
                       onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
-                      className="mt-2"
+                      className="mt-2 min-w-[200px]"
                    >
                       <Terminal className="mr-2 h-4 w-4" />
                       {isLogPanelOpen ? t("app.hideLogs") : t("execute.viewLogs")}
                    </Button>
                 </CardContent>
-                <CardFooter className="flex justify-between bg-muted/20">
-                    <Button 
-                      variant="ghost" 
-                      onClick={handleStartOver}
-                      disabled={isProcessing}
-                    >
-                      <FolderOpen className="mr-2 h-4 w-4" />
-                      {t("execute.startOver")}
-                    </Button>
-                    <Button 
-                      variant="default"
-                      onClick={handleExecute}
-                      disabled={isProcessing}
-                    >
-                      <RotateCcw className="mr-2 h-4 w-4" />
-                      {t("execute.retry")}
-                    </Button>
-                </CardFooter>
+                {!isProcessing && (
+                    <CardFooter className="flex justify-between bg-muted/30 p-6 border-t border-border/50">
+                        <Button 
+                          variant="ghost" 
+                          onClick={handleStartOver}
+                          disabled={isProcessing}
+                        >
+                          <FolderOpen className="mr-2 h-4 w-4" />
+                          {t("execute.startOver")}
+                        </Button>
+                        <Button 
+                          variant="default"
+                          onClick={handleExecute}
+                          disabled={isProcessing}
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          {t("execute.retry")}
+                        </Button>
+                    </CardFooter>
+                )}
             </Card>
         )}
 
         {step === "success" && (
-            <Card className="border-green-500/50">
-                 <CardHeader>
-                    <CardTitle className="text-green-600 flex items-center">
-                        <CheckCircle className="mr-2 h-5 w-5" />
+            <Card className="border-green-500/30 shadow-xl shadow-green-500/10 overflow-hidden backdrop-blur-sm bg-card/95">
+                 <CardHeader className="text-center bg-green-500/5 border-b border-green-500/10 pb-6">
+                    <CardTitle className="text-green-600 dark:text-green-400 flex flex-col items-center gap-3 text-2xl">
+                        <div className="h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center ring-1 ring-green-500/20">
+                            <CheckCircle className="h-8 w-8 text-green-500" />
+                        </div>
                         {t("success.title")}
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-green-600/80 dark:text-green-400/70 mt-2 text-base">
                         {t("success.desc")}
                     </CardDescription>
                 </CardHeader>
-                 <CardContent>
-                     <p className="mb-4">
+                 <CardContent className="p-8 text-center">
+                     <p className="text-muted-foreground mb-6 leading-relaxed">
                          {t("success.remoteCleanNote")}
                      </p>
-                     <div className="flex gap-2">
+                     <div className="flex gap-3 justify-center">
                        <Button
                          onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
                          variant="outline"
+                         className="min-w-[140px]"
                        >
                          {isLogPanelOpen ? t("app.hideLogs") : t("success.viewLogs")}
                        </Button>
-                     <Button
-                       onClick={handleStartOver}
-                       variant="outline"
-                     >
-                       {t("success.startOver")}
-                     </Button>
+                       <Button
+                         onClick={handleStartOver}
+                         variant="default"
+                         className="min-w-[140px] bg-green-600 hover:bg-green-700 text-white"
+                       >
+                         {t("success.startOver")}
+                       </Button>
                      </div>
                   </CardContent>
             </Card>
