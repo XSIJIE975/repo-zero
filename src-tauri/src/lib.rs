@@ -27,6 +27,13 @@ struct RepoInfo {
     requires_default_branch_choice: bool,
 }
 
+#[derive(serde::Serialize)]
+struct GitStatusInfo {
+    installed: bool,
+    version: Option<String>,
+    meets_minimum: bool, // >= 2.28
+}
+
 fn parse_ls_remote_head_branch(output: &str) -> Option<String> {
     // Expected line: "ref: refs/heads/main\tHEAD"
     for line in output.lines() {
@@ -299,6 +306,76 @@ async fn execute_reset(app: AppHandle, path: String, target_branch: Option<Strin
     Ok(())
 }
 
+#[tauri::command]
+async fn check_git_status() -> Result<GitStatusInfo, String> {
+    use regex::Regex;
+
+    // 尝试执行 git --version
+    let mut cmd = std::process::Command::new("git");
+    cmd.args(&["--version"]);
+
+    #[cfg(windows)]
+    {
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = match cmd.output() {
+        Ok(o) => o,
+        Err(_) => {
+            // Git 未安装或无法执行
+            return Ok(GitStatusInfo {
+                installed: false,
+                version: None,
+                meets_minimum: false,
+            });
+        }
+    };
+
+    if !output.status.success() {
+        return Ok(GitStatusInfo {
+            installed: false,
+            version: None,
+            meets_minimum: false,
+        });
+    }
+
+    let output_str = String::from_utf8_lossy(&output.stdout);
+
+    // 解析版本号: git version X.Y.Z
+    let version_str = output_str.trim().to_string();
+
+    // 正则提取主版本号
+    let re = Regex::new(r"git version (\d+)\.(\d+)").map_err(|e| e.to_string())?;
+
+    let (major, minor) = if let Some(caps) = re.captures(&output_str) {
+        let major: u32 = caps
+            .get(1)
+            .and_then(|m| m.as_str().parse().ok())
+            .unwrap_or(0);
+        let minor: u32 = caps
+            .get(2)
+            .and_then(|m| m.as_str().parse().ok())
+            .unwrap_or(0);
+        (major, minor)
+    } else {
+        // 解析失败，宽松策略：假设可用
+        return Ok(GitStatusInfo {
+            installed: true,
+            version: Some(version_str),
+            meets_minimum: true,
+        });
+    };
+
+    // 检查 >= 2.28
+    let meets_minimum = (major > 2) || (major == 2 && minor >= 28);
+
+    Ok(GitStatusInfo {
+        installed: true,
+        version: Some(format!("{}.{}", major, minor)),
+        meets_minimum,
+    })
+}
+
 fn emit(app: &AppHandle, msg: &str) {
     let _ = app.emit("log-event", msg);
 }
@@ -361,7 +438,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![greet, execute_reset, scan_repo])
+         .invoke_handler(tauri::generate_handler![greet, execute_reset, scan_repo, check_git_status])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
