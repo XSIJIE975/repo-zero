@@ -8,8 +8,9 @@ import {
   Minimize2,
   Settings2
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useDeferredValue } from "react"
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useDeferredValue, memo } from "react"
 import { useTranslation } from "react-i18next"
+import { FixedSizeList as List, ListChildComponentProps, areEqual } from 'react-window'
 import {
   Button,
   cn,
@@ -21,7 +22,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui"
-import { clearLogs, getLogSnapshot, type LogLevel, subscribeLogs } from "@/lib/logStore"
+import { clearLogs, getLogSnapshot, type LogLevel, subscribeLogs, type LogEntry } from "@/lib/logStore"
 import { getSetting, setSetting } from "@/lib/settings"
 
 type Density = "compact" | "comfortable"
@@ -31,6 +32,86 @@ const LOG_PANEL_DENSITY_KEY = "repo-zero:log_panel:density"
 function isDensity(v: unknown): v is Density {
   return v === "compact" || v === "comfortable"
 }
+
+const getLogColor = (level: LogLevel) => {
+  if (level === "error") return "text-red-500 dark:text-red-400 font-bold"
+  if (level === "warn") return "text-warning font-medium"
+  if (level === "debug") return "text-muted-foreground italic"
+  return "text-blue-500 dark:text-blue-300"
+}
+
+const formatTime = (ts: number) => {
+  const d = new Date(ts)
+  const hh = String(d.getHours()).padStart(2, "0")
+  const mm = String(d.getMinutes()).padStart(2, "0")
+  const ss = String(d.getSeconds()).padStart(2, "0")
+  return `${hh}:${mm}:${ss}`
+}
+
+interface ItemData {
+  logs: ReadonlyArray<LogEntry>
+  densityUi: any
+  renderMessage: (raw: string) => string
+  formatEntryForCopy: (entry: LogEntry) => string
+  t: any
+}
+
+const LogRow = memo(({ index, style, data }: ListChildComponentProps<ItemData>) => {
+  const { logs, densityUi, renderMessage, formatEntryForCopy, t } = data
+  const log = logs[index]
+
+  return (
+    <div
+      style={style}
+      className={cn("group flex flex-col hover:bg-muted/40 rounded-lg transition-all border border-transparent hover:border-border/30", densityUi.row)}
+    >
+      <div className={cn("flex items-baseline relative", densityUi.rowGap)}>
+         <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
+            <button
+              onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
+              className={cn("text-muted-foreground hover:text-primary hover:bg-background/80 rounded-md shadow-sm border border-border/50 bg-background/50 backdrop-blur-sm", densityUi.copyBtn)}
+              title={t("log_panel.copy_tooltip")}
+              type="button"
+            >
+              <Copy className={densityUi.copyIcon} />
+            </button>
+         </div>
+        
+        <span className={cn("text-muted-foreground/40 select-none text-right shrink-0 font-mono tabular-nums tracking-tighter", densityUi.ts)}>
+          {formatTime(log.ts)}
+        </span>
+        
+        <div className="flex-1 min-w-0">
+            <div className={cn("flex items-center", densityUi.metaRow)}>
+               <span className={cn(
+                    "uppercase tracking-wider font-bold rounded border",
+                    densityUi.badge,
+                    log.level === 'error' ? "bg-red-500/10 border-red-500/20 text-red-500" :
+                    log.level === 'warn' ? "bg-warning/10 border-warning/20 text-warning" :
+                    log.level === 'info' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
+                    "bg-muted/30 border-muted-foreground/20 text-muted-foreground"
+                )}>
+                    {log.level}
+                </span>
+               <span className={cn("text-muted-foreground/60 font-semibold", densityUi.category)}>{log.category}</span>
+            </div>
+            <span className={cn("break-words block font-mono", densityUi.message, getLogColor(log.level))}>
+              {renderMessage(log.message)}
+            </span>
+        </div>
+      </div>
+      {log.data !== undefined && (
+        <div className={densityUi.dataWrap}>
+          <div className={cn("bg-background/50 rounded-lg border border-border/30 overflow-hidden shadow-inner", densityUi.dataBox)}>
+              <pre className={cn("text-muted-foreground overflow-x-auto font-mono", densityUi.dataPre)}>
+              {typeof log.data === "string" ? log.data : JSON.stringify(log.data, null, 2)}
+              </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}, areEqual)
 
 interface LogPanelProps {
   isOpen?: boolean
@@ -206,8 +287,9 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
     }
   }
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const endRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<List>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerHeight, setContainerHeight] = useState(0)
 
   const toggleOpen = () => {
     if (onToggle) {
@@ -216,12 +298,6 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
       setInternalIsOpen(!internalIsOpen)
     }
   }
-
-  useEffect(() => {
-    if (autoScroll && open && endRef.current) {
-      endRef.current.scrollIntoView({ behavior: "smooth" })
-    }
-  }, [logs, autoScroll, open])
 
   const filteredLogs = useMemo(() => {
     const needle = deferredFilterText.trim()
@@ -270,29 +346,6 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
     })
   }, [logs, deferredFilterText, levelFilter, i18n.language, i18n.resolvedLanguage])
 
-   const getLogColor = (level: LogLevel) => {
-     if (level === "error") return "text-red-500 dark:text-red-400 font-bold"
-     if (level === "warn") return "text-warning font-medium"
-     if (level === "debug") return "text-muted-foreground italic"
-     return "text-blue-500 dark:text-blue-300"
-   }
-
-  const formatTime = (ts: number) => {
-    const d = new Date(ts)
-    const hh = String(d.getHours()).padStart(2, "0")
-    const mm = String(d.getMinutes()).padStart(2, "0")
-    const ss = String(d.getSeconds()).padStart(2, "0")
-    return `${hh}:${mm}:${ss}`
-  }
-
-  const levelTabs: Array<{ id: LogLevel | "all"; label: string }> = [
-    { id: "all", label: t("log_panel.level.all") },
-    { id: "error", label: t("log_panel.level.error") },
-    { id: "warn", label: t("log_panel.level.warn") },
-    { id: "info", label: t("log_panel.level.info") },
-    { id: "debug", label: t("log_panel.level.debug") },
-  ]
-
   const formatEntryForCopy = (entry: (typeof logs)[number]) => {
     const msg = renderMessage(entry.message)
     const base = `[${formatTime(entry.ts)}] [${entry.level.toUpperCase()}] [${entry.category}] ${msg}`
@@ -301,6 +354,43 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
       typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data, null, 2)
     return `${base}\nData: ${dataStr}`
   }
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setContainerHeight(entries[0].contentRect.height)
+      }
+    })
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [open, panelHeight])
+
+  const rowHeight = useMemo(() => {
+    return density === "compact" ? 60 : 80
+  }, [density])
+
+  useEffect(() => {
+    if (autoScroll && listRef.current && filteredLogs.length > 0) {
+      listRef.current.scrollToItem(filteredLogs.length - 1, "end")
+    }
+  }, [filteredLogs.length, autoScroll, open])
+
+  const itemData = useMemo(() => ({
+    logs: filteredLogs,
+    densityUi,
+    renderMessage,
+    formatEntryForCopy,
+    t
+  }), [filteredLogs, densityUi, renderMessage, formatEntryForCopy, t])
+
+  const levelTabs: Array<{ id: LogLevel | "all"; label: string }> = [
+    { id: "all", label: t("log_panel.level.all") },
+    { id: "error", label: t("log_panel.level.error") },
+    { id: "warn", label: t("log_panel.level.warn") },
+    { id: "info", label: t("log_panel.level.info") },
+    { id: "debug", label: t("log_panel.level.debug") },
+  ]
 
   return (
     <>
@@ -464,8 +554,8 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
 
         {/* Log Content */}
         <div
-          ref={scrollRef}
-          className={cn("flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40 transition-colors bg-black/5", densityUi.content)}
+          ref={containerRef}
+          className={cn("flex-1 overflow-hidden bg-black/5", densityUi.content)}
         >
           {filteredLogs.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 opacity-50">
@@ -475,59 +565,18 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
               <p className="text-sm font-medium">{t("log_panel.no_logs")}</p>
             </div>
           ) : (
-            filteredLogs.map((log, i) => (
-              <div
-                key={`${log.ts}-${i}`}
-                className={cn("group flex flex-col hover:bg-muted/40 rounded-lg transition-all border border-transparent hover:border-border/30", densityUi.row)}
-              >
-                <div className={cn("flex items-baseline relative", densityUi.rowGap)}>
-                   <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
-                        className={cn("text-muted-foreground hover:text-primary hover:bg-background/80 rounded-md shadow-sm border border-border/50 bg-background/50 backdrop-blur-sm", densityUi.copyBtn)}
-                        title={t("log_panel.copy_tooltip")}
-                        type="button"
-                      >
-                        <Copy className={densityUi.copyIcon} />
-                      </button>
-                   </div>
-                  
-                  <span className={cn("text-muted-foreground/40 select-none text-right shrink-0 font-mono tabular-nums tracking-tighter", densityUi.ts)}>
-                    {formatTime(log.ts)}
-                  </span>
-                  
-                  <div className="flex-1 min-w-0">
-                      <div className={cn("flex items-center", densityUi.metaRow)}>
-                         <span className={cn(
-                              "uppercase tracking-wider font-bold rounded border",
-                              densityUi.badge,
-                              log.level === 'error' ? "bg-red-500/10 border-red-500/20 text-red-500" :
-                              log.level === 'warn' ? "bg-warning/10 border-warning/20 text-warning" :
-                              log.level === 'info' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
-                              "bg-muted/30 border-muted-foreground/20 text-muted-foreground"
-                          )}>
-                              {log.level}
-                          </span>
-                         <span className={cn("text-muted-foreground/60 font-semibold", densityUi.category)}>{log.category}</span>
-                      </div>
-                      <span className={cn("break-words block font-mono", densityUi.message, getLogColor(log.level))}>
-                        {renderMessage(log.message)}
-                      </span>
-                  </div>
-                </div>
-                {log.data !== undefined && (
-                  <div className={densityUi.dataWrap}>
-                    <div className={cn("bg-background/50 rounded-lg border border-border/30 overflow-hidden shadow-inner", densityUi.dataBox)}>
-                        <pre className={cn("text-muted-foreground overflow-x-auto font-mono", densityUi.dataPre)}>
-                        {typeof log.data === "string" ? log.data : JSON.stringify(log.data, null, 2)}
-                        </pre>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))
+            <List
+              height={containerHeight}
+              itemCount={filteredLogs.length}
+              itemSize={rowHeight}
+              width="100%"
+              ref={listRef}
+              itemData={itemData}
+              className="scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40"
+            >
+              {LogRow}
+            </List>
           )}
-          <div ref={endRef} />
         </div>
       </div>
     </>
