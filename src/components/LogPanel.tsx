@@ -1,6 +1,7 @@
 import {
   ArrowDownCircle,
   Copy,
+  Check,
   Filter,
   Trash2,
   Search,
@@ -54,28 +55,35 @@ interface ItemData {
   renderMessage: (raw: string) => string
   formatEntryForCopy: (entry: LogEntry) => string
   t: any
+  handleCopyLog: (index: number, text: string) => void
+  copiedIndex: number | null
 }
 
 const LogRow = memo(({ index, style, data }: ListChildComponentProps<ItemData>) => {
-  const { logs, densityUi, renderMessage, formatEntryForCopy, t } = data
-  const log = logs[index]
+   const { logs, densityUi, renderMessage, formatEntryForCopy, t, handleCopyLog, copiedIndex } = data
+   const log = logs[index]
+   const isCopied = copiedIndex === index
 
-  return (
-    <div
-      style={style}
-      className={cn("group flex flex-col hover:bg-muted/40 rounded-lg transition-all border border-transparent hover:border-border/30", densityUi.row)}
-    >
-      <div className={cn("flex items-baseline relative", densityUi.rowGap)}>
-         <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
-            <button
-              onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
-              className={cn("text-muted-foreground hover:text-primary hover:bg-background/80 rounded-md shadow-sm border border-border/50 bg-background/50 backdrop-blur-sm", densityUi.copyBtn)}
-              title={t("log_panel.copy_tooltip")}
-              type="button"
-            >
-              <Copy className={densityUi.copyIcon} />
-            </button>
-         </div>
+   return (
+     <div
+       style={style}
+       className={cn("group flex flex-col hover:bg-muted/40 rounded-lg transition-all border border-transparent hover:border-border/30", densityUi.row)}
+     >
+       <div className={cn("flex items-baseline relative", densityUi.rowGap)}>
+          <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
+             <button
+               onClick={() => handleCopyLog(index, formatEntryForCopy(log))}
+               className={cn("text-muted-foreground hover:text-primary hover:bg-background/80 rounded-md shadow-sm border border-border/50 bg-background/50 backdrop-blur-sm", densityUi.copyBtn)}
+               title={isCopied ? t("log_panel.copied_tooltip") : t("log_panel.copy_tooltip")}
+               type="button"
+             >
+               {isCopied ? (
+                 <Check className={cn(densityUi.copyIcon, "text-green-500")} />
+               ) : (
+                 <Copy className={densityUi.copyIcon} />
+               )}
+             </button>
+          </div>
         
         <span className={cn("text-muted-foreground/40 select-none text-right shrink-0 font-mono tabular-nums tracking-tighter", densityUi.ts)}>
           {formatTime(log.ts)}
@@ -128,11 +136,12 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
   const snapshot = useSyncExternalStore(subscribeLogs, getLogSnapshot, getLogSnapshot)
   const logs = snapshot.entries
 
-  const [autoScroll, setAutoScroll] = useState(true)
-  const [filterText, setFilterText] = useState("")
-  const deferredFilterText = useDeferredValue(filterText)
-  const [levelFilter, setLevelFilter] = useState<LogLevel | "all">("all")
-  const [density, setDensity] = useState<Density>("compact")
+   const [autoScroll, setAutoScroll] = useState(true)
+   const [filterText, setFilterText] = useState("")
+   const deferredFilterText = useDeferredValue(filterText)
+   const [levelFilter, setLevelFilter] = useState<LogLevel | "all">("all")
+   const [density, setDensity] = useState<Density>("compact")
+   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
   // Load density setting
   useEffect(() => {
@@ -346,14 +355,21 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
     })
   }, [logs, deferredFilterText, levelFilter, i18n.language, i18n.resolvedLanguage])
 
-  const formatEntryForCopy = (entry: (typeof logs)[number]) => {
-    const msg = renderMessage(entry.message)
-    const base = `[${formatTime(entry.ts)}] [${entry.level.toUpperCase()}] [${entry.category}] ${msg}`
-    if (!entry.data) return base
-    const dataStr =
-      typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data, null, 2)
-    return `${base}\nData: ${dataStr}`
-  }
+   const formatEntryForCopy = (entry: (typeof logs)[number]) => {
+     const msg = renderMessage(entry.message)
+     const base = `[${formatTime(entry.ts)}] [${entry.level.toUpperCase()}] [${entry.category}] ${msg}`
+     if (!entry.data) return base
+     const dataStr =
+       typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data, null, 2)
+     return `${base}\nData: ${dataStr}`
+   }
+
+   const handleCopyLog = (index: number, text: string) => {
+     void navigator.clipboard.writeText(text).then(() => {
+       setCopiedIndex(index)
+       setTimeout(() => setCopiedIndex(null), 2000)
+     })
+   }
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -376,13 +392,15 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
     }
   }, [filteredLogs.length, autoScroll, open])
 
-  const itemData = useMemo(() => ({
-    logs: filteredLogs,
-    densityUi,
-    renderMessage,
-    formatEntryForCopy,
-    t
-  }), [filteredLogs, densityUi, renderMessage, formatEntryForCopy, t])
+   const itemData = useMemo(() => ({
+     logs: filteredLogs,
+     densityUi,
+     renderMessage,
+     formatEntryForCopy,
+     t,
+     handleCopyLog,
+     copiedIndex,
+   }), [filteredLogs, densityUi, renderMessage, formatEntryForCopy, t, handleCopyLog, copiedIndex])
 
   const levelTabs: Array<{ id: LogLevel | "all"; label: string }> = [
     { id: "all", label: t("log_panel.level.all") },
