@@ -8,7 +8,7 @@ import {
   Minimize2,
   Settings2
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useDeferredValue } from "react"
 import { useTranslation } from "react-i18next"
 import {
   Button,
@@ -49,6 +49,7 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
 
   const [autoScroll, setAutoScroll] = useState(true)
   const [filterText, setFilterText] = useState("")
+  const deferredFilterText = useDeferredValue(filterText)
   const [levelFilter, setLevelFilter] = useState<LogLevel | "all">("all")
   const [density, setDensity] = useState<Density>("compact")
 
@@ -223,7 +224,7 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
   }, [logs, autoScroll, open])
 
   const filteredLogs = useMemo(() => {
-    const needle = filterText.trim()
+    const needle = deferredFilterText.trim()
 
     const normalize = (s: string) => s.toLocaleLowerCase("en-US")
 
@@ -267,14 +268,14 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
       const rendered = renderedByRaw.get(e.message) ?? ""
       return tokens.every((tok) => fuzzyMatch(tok, rendered))
     })
-  }, [logs, filterText, levelFilter, i18n.language, i18n.resolvedLanguage])
+  }, [logs, deferredFilterText, levelFilter, i18n.language, i18n.resolvedLanguage])
 
-  const getLogColor = (level: LogLevel) => {
-    if (level === "error") return "text-red-500 dark:text-red-400 font-bold"
-    if (level === "warn") return "text-yellow-500 dark:text-yellow-400 font-medium"
-    if (level === "debug") return "text-muted-foreground italic"
-    return "text-blue-500 dark:text-blue-300"
-  }
+   const getLogColor = (level: LogLevel) => {
+     if (level === "error") return "text-red-500 dark:text-red-400 font-bold"
+     if (level === "warn") return "text-warning font-medium"
+     if (level === "debug") return "text-muted-foreground italic"
+     return "text-blue-500 dark:text-blue-300"
+   }
 
   const formatTime = (ts: number) => {
     const d = new Date(ts)
@@ -480,7 +481,7 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
                 className={cn("group flex flex-col hover:bg-muted/40 rounded-lg transition-all border border-transparent hover:border-border/30", densityUi.row)}
               >
                 <div className={cn("flex items-baseline relative", densityUi.rowGap)}>
-                   <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <button
                         onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
                         className={cn("text-muted-foreground hover:text-primary hover:bg-background/80 rounded-md shadow-sm border border-border/50 bg-background/50 backdrop-blur-sm", densityUi.copyBtn)}
@@ -498,15 +499,15 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
                   <div className="flex-1 min-w-0">
                       <div className={cn("flex items-center", densityUi.metaRow)}>
                          <span className={cn(
-                             "uppercase tracking-wider font-bold rounded border",
-                             densityUi.badge,
-                             log.level === 'error' ? "bg-red-500/10 border-red-500/20 text-red-500" :
-                             log.level === 'warn' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500" :
-                             log.level === 'info' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
-                             "bg-muted/30 border-muted-foreground/20 text-muted-foreground"
-                         )}>
-                             {log.level}
-                         </span>
+                              "uppercase tracking-wider font-bold rounded border",
+                              densityUi.badge,
+                              log.level === 'error' ? "bg-red-500/10 border-red-500/20 text-red-500" :
+                              log.level === 'warn' ? "bg-warning/10 border-warning/20 text-warning" :
+                              log.level === 'info' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
+                              "bg-muted/30 border-muted-foreground/20 text-muted-foreground"
+                          )}>
+                              {log.level}
+                          </span>
                          <span className={cn("text-muted-foreground/60 font-semibold", densityUi.category)}>{log.category}</span>
                       </div>
                       <span className={cn("break-words block font-mono", densityUi.message, getLogColor(log.level))}>
