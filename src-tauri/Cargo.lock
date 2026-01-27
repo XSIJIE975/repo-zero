@@ -2648,6 +2648,7 @@ name = "repo-zero"
 version = "0.0.0"
 dependencies = [
  "git2",
+ "regex",
  "serde",
  "serde_json",
  "tauri",
