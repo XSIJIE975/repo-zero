@@ -5,15 +5,32 @@ import {
   Trash2,
   Search,
   Activity,
-  Minimize2
+  Minimize2,
+  Settings2
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { useTranslation } from "react-i18next"
 import {
   Button,
   cn,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui"
 import { clearLogs, getLogSnapshot, type LogLevel, subscribeLogs } from "@/lib/logStore"
+import { getSetting, setSetting } from "@/lib/settings"
+
+type Density = "compact" | "comfortable"
+
+const LOG_PANEL_DENSITY_KEY = "repo-zero:log_panel:density"
+
+function isDensity(v: unknown): v is Density {
+  return v === "compact" || v === "comfortable"
+}
 
 interface LogPanelProps {
   isOpen?: boolean
@@ -33,6 +50,87 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
   const [autoScroll, setAutoScroll] = useState(true)
   const [filterText, setFilterText] = useState("")
   const [levelFilter, setLevelFilter] = useState<LogLevel | "all">("all")
+  const [density, setDensity] = useState<Density>("compact")
+
+  // Load density setting
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const saved = await getSetting<Density>(LOG_PANEL_DENSITY_KEY)
+      if (cancelled) return
+      if (!isDensity(saved)) return
+      setDensity(saved)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const updateDensity = (next: Density) => {
+    setDensity(next)
+    void setSetting(LOG_PANEL_DENSITY_KEY, next)
+  }
+
+  const densityUi = useMemo(() => {
+    if (density === "compact") {
+      return {
+        header: "gap-3 px-4 py-2",
+        headerTitleIconWrap: "h-5 w-5 rounded-md",
+        headerTitleIcon: "h-3.5 w-3.5",
+        tabsWrap: "p-0.5",
+        tabBtn: "text-[10px] px-2 py-0.5",
+        searchWrap: "w-48 px-2.5 py-1",
+        searchIcon: "h-3 w-3",
+        searchInput: "text-[11px]",
+        filterClearIcon: "h-3 w-3",
+        actionsWrap: "gap-1",
+        actionBtn: "h-7 w-7",
+        actionIcon: "h-3.5 w-3.5",
+        content: "p-3 space-y-0.5",
+        row: "py-1 px-2.5",
+        rowGap: "gap-2.5",
+        copyBtn: "p-1.5",
+        copyIcon: "h-3 w-3",
+        ts: "w-[4.25rem] text-[10px]",
+        metaRow: "gap-1.5 mb-0.5",
+        badge: "text-[9px] px-1 py-0.5",
+        category: "text-[9px]",
+        message: "text-[11px] leading-snug",
+        dataWrap: "mt-1.5",
+        dataBox: "p-1.5",
+        dataPre: "text-[9px] leading-snug",
+      }
+    }
+
+    // comfortable
+    return {
+      header: "gap-4 px-5 py-3",
+      headerTitleIconWrap: "h-6 w-6 rounded-md",
+      headerTitleIcon: "h-4 w-4",
+      tabsWrap: "p-1",
+      tabBtn: "text-[11px] px-2.5 py-1",
+      searchWrap: "w-56 px-3 py-1.5",
+      searchIcon: "h-3.5 w-3.5",
+      searchInput: "text-xs",
+      filterClearIcon: "h-3.5 w-3.5",
+      actionsWrap: "gap-1.5",
+      actionBtn: "h-8 w-8",
+      actionIcon: "h-4 w-4",
+      content: "p-4 space-y-1",
+      row: "py-1.5 px-3",
+      rowGap: "gap-3",
+      copyBtn: "p-2",
+      copyIcon: "h-3.5 w-3.5",
+      ts: "w-[4.5rem] text-[11px]",
+      metaRow: "gap-2 mb-1",
+      badge: "text-[10px] px-1.5 py-0.5",
+      category: "text-[10px]",
+      message: "text-xs leading-relaxed",
+      dataWrap: "mt-2",
+      dataBox: "p-2",
+      dataPre: "text-[10px] leading-relaxed",
+    }
+  }, [density])
 
   // Resizable logic
   const MIN_PANEL_HEIGHT = 180
@@ -208,7 +306,7 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
       {/* Minimized Toggle Button (Visible when closed) */}
       <div
         className={cn(
-          "fixed bottom-6 right-6 z-50 transition-all duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb;",
+          "fixed bottom-6 right-6 z-50 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
           open ? "translate-y-24 opacity-0 pointer-events-none scale-75" : "translate-y-0 opacity-100 scale-100"
         )}
       >
@@ -234,7 +332,7 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
         style={{ height: open ? panelHeight : 0 }}
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-2xl border-t border-border/50 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col font-mono text-sm",
-          isDragging ? "transition-none" : "transition-[height] duration-500 ease-&lsqb;cubic-bezier(0.32,0.72,0,1)&rsqb;",
+          isDragging ? "transition-none" : "transition-[height] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
           className
         )}
       >
@@ -251,23 +349,24 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 bg-muted/20 border-b border-border/50 shrink-0 select-none">
+        <div className={cn("flex items-center justify-between bg-muted/20 border-b border-border/50 shrink-0 select-none", densityUi.header)}>
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-2">
-                 <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center text-primary">
-                    <Activity className="h-4 w-4" />
+                 <div className={cn("bg-primary/10 flex items-center justify-center text-primary", densityUi.headerTitleIconWrap)}>
+                    <Activity className={densityUi.headerTitleIcon} />
                  </div>
                  <span className="font-bold tracking-tight text-foreground">{t("log_panel.title")}</span>
              </div>
              
              <div className="h-4 w-px bg-border/50 mx-2" />
 
-             <div className="flex items-center gap-2">
+             <div className={cn("flex items-center gap-2", densityUi.tabsWrap)}>
                 {levelTabs.map((tab) => (
                     <button
                     key={tab.id}
                     className={cn(
-                        "text-[10px] uppercase font-bold px-3 py-1.5 rounded-full transition-all border border-transparent",
+                        "uppercase font-bold rounded-full transition-all border border-transparent",
+                        densityUi.tabBtn,
                         levelFilter === tab.id
                         ? "bg-foreground text-background shadow-sm scale-105"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-border/30 hover:border-border/80"
@@ -282,54 +381,80 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
           </div>
 
           <div className="flex items-center gap-3">
-             <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/50 rounded-lg focus-within:ring-2 focus-within:ring-primary/20 transition-all w-64 shadow-sm">
-                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
+             <div className={cn("flex items-center gap-2 bg-background border border-border/50 rounded-lg focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-sm", densityUi.searchWrap)}>
+                 <Search className={cn("text-muted-foreground", densityUi.searchIcon)} />
                  <input
                     type="text"
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
                     placeholder={t("log_panel.filter_placeholder")}
-                    className="bg-transparent border-none text-xs w-full focus:outline-none placeholder:text-muted-foreground/50"
+                    className={cn("bg-transparent border-none w-full focus:outline-none placeholder:text-muted-foreground/50", densityUi.searchInput)}
                  />
                  {filterText && (
                      <button onClick={() => setFilterText("")} className="text-muted-foreground hover:text-foreground">
-                         <Trash2 className="h-3 w-3" />
+                         <Trash2 className={densityUi.filterClearIcon} />
                      </button>
                  )}
              </div>
 
-             <div className="flex items-center gap-1 pl-2 border-l border-border/50">
+             <div className={cn("flex items-center pl-2 border-l border-border/50", densityUi.actionsWrap)}>
                 <Button
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        "h-8 w-8 rounded-lg hover:bg-background/80 transition-all",
+                        "rounded-lg hover:bg-background/80 transition-all",
+                        densityUi.actionBtn,
                         autoScroll ? "text-primary bg-primary/10 ring-1 ring-primary/20" : "text-muted-foreground"
                     )}
                     onClick={() => setAutoScroll(!autoScroll)}
                     title={t("log_panel.auto_scroll_tooltip")}
                 >
-                    <ArrowDownCircle className="h-4 w-4" />
+                    <ArrowDownCircle className={densityUi.actionIcon} />
                 </Button>
 
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    className={cn("rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors", densityUi.actionBtn)}
                     onClick={clearLogs}
                     title={t("log_panel.clear_tooltip")}
                 >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className={densityUi.actionIcon} />
                 </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn("rounded-md hover:bg-muted/40 text-muted-foreground", densityUi.actionBtn)}
+                      title={t("log_panel.density.toggle")}
+                    >
+                      <Settings2 className={densityUi.actionIcon} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>{t("log_panel.density.label")}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioGroup value={density} onValueChange={(v) => updateDensity(v as Density)}>
+                      <DropdownMenuRadioItem value="compact">
+                        {t("log_panel.density.compact")}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="comfortable">
+                        {t("log_panel.density.comfortable")}
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-lg hover:bg-background/80 text-muted-foreground"
+                    className={cn("rounded-lg hover:bg-background/80 text-muted-foreground", densityUi.actionBtn)}
                     onClick={toggleOpen}
                     title={t("log_panel.minimize_tooltip")}
                 >
-                    <Minimize2 className="h-4 w-4" />
+                    <Minimize2 className={densityUi.actionIcon} />
                 </Button>
              </div>
           </div>
@@ -338,7 +463,7 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
         {/* Log Content */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40 transition-colors bg-black/5"
+          className={cn("flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40 transition-colors bg-black/5", densityUi.content)}
         >
           {filteredLogs.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 opacity-50">
@@ -351,28 +476,29 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
             filteredLogs.map((log, i) => (
               <div
                 key={`${log.ts}-${i}`}
-                className="group flex flex-col text-[11px] leading-relaxed hover:bg-muted/40 p-2 rounded-lg transition-all border border-transparent hover:border-border/30"
+                className={cn("group flex flex-col hover:bg-muted/40 rounded-lg transition-all border border-transparent hover:border-border/30", densityUi.row)}
               >
-                <div className="flex gap-4 items-baseline relative">
+                <div className={cn("flex items-baseline relative", densityUi.rowGap)}>
                    <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => void navigator.clipboard.writeText(formatEntryForCopy(log))}
-                        className="text-muted-foreground hover:text-primary p-1.5 hover:bg-background/80 rounded-md shadow-sm border border-border/50 bg-background/50 backdrop-blur-sm"
+                        className={cn("text-muted-foreground hover:text-primary hover:bg-background/80 rounded-md shadow-sm border border-border/50 bg-background/50 backdrop-blur-sm", densityUi.copyBtn)}
                         title={t("log_panel.copy_tooltip")}
                         type="button"
                       >
-                        <Copy className="h-3 w-3" />
+                        <Copy className={densityUi.copyIcon} />
                       </button>
                    </div>
                   
-                  <span className="text-muted-foreground/40 select-none w-16 text-right shrink-0 font-mono text-[10px] tabular-nums tracking-tighter">
+                  <span className={cn("text-muted-foreground/40 select-none text-right shrink-0 font-mono tabular-nums tracking-tighter", densityUi.ts)}>
                     {formatTime(log.ts)}
                   </span>
                   
                   <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className={cn("flex items-center", densityUi.metaRow)}>
                          <span className={cn(
-                             "uppercase tracking-wider text-[9px] font-bold px-1.5 py-0.5 rounded border",
+                             "uppercase tracking-wider font-bold rounded border",
+                             densityUi.badge,
                              log.level === 'error' ? "bg-red-500/10 border-red-500/20 text-red-500" :
                              log.level === 'warn' ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500" :
                              log.level === 'info' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" :
@@ -380,17 +506,17 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
                          )}>
                              {log.level}
                          </span>
-                         <span className="text-[10px] text-muted-foreground/60 font-semibold">{log.category}</span>
+                         <span className={cn("text-muted-foreground/60 font-semibold", densityUi.category)}>{log.category}</span>
                       </div>
-                      <span className={cn("break-words block font-mono text-xs", getLogColor(log.level))}>
+                      <span className={cn("break-words block font-mono", densityUi.message, getLogColor(log.level))}>
                         {renderMessage(log.message)}
                       </span>
                   </div>
                 </div>
                 {log.data !== undefined && (
-                  <div className="pl-[5.5rem] mt-2 pr-4">
-                    <div className="bg-background/50 p-3 rounded-lg border border-border/30 overflow-hidden shadow-inner">
-                        <pre className="text-[10px] text-muted-foreground overflow-x-auto font-mono">
+                  <div className={densityUi.dataWrap}>
+                    <div className={cn("bg-background/50 rounded-lg border border-border/30 overflow-hidden shadow-inner", densityUi.dataBox)}>
+                        <pre className={cn("text-muted-foreground overflow-x-auto font-mono", densityUi.dataPre)}>
                         {typeof log.data === "string" ? log.data : JSON.stringify(log.data, null, 2)}
                         </pre>
                     </div>
