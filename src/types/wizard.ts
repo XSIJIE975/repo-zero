@@ -10,3 +10,8 @@ export interface RepoInfo {
   default_branch_candidates: string[]
   requires_default_branch_choice: boolean
 }
+
+export type GitStatus =
+  | { status: "checking" }
+  | { status: "available"; version: string; meetsMinimum: boolean }
+  | { status: "missing" }
