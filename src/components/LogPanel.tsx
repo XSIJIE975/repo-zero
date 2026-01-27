@@ -383,13 +383,14 @@ export function LogPanel({ isOpen: externalIsOpen, onToggle, className }: LogPan
           <div className="flex items-center gap-3">
              <div className={cn("flex items-center gap-2 bg-background border border-border/50 rounded-lg focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-sm", densityUi.searchWrap)}>
                  <Search className={cn("text-muted-foreground", densityUi.searchIcon)} />
-                 <input
-                    type="text"
-                    value={filterText}
-                    onChange={(e) => setFilterText(e.target.value)}
-                    placeholder={t("log_panel.filter_placeholder")}
-                    className={cn("bg-transparent border-none w-full focus:outline-none placeholder:text-muted-foreground/50", densityUi.searchInput)}
-                 />
+                  <input
+                     type="text"
+                     value={filterText}
+                     onChange={(e) => setFilterText(e.target.value)}
+                     placeholder={t("log_panel.filter_placeholder")}
+                     aria-label={t("log_panel.filter_placeholder")}
+                     className={cn("bg-transparent border-none w-full focus:outline-none placeholder:text-muted-foreground/50", densityUi.searchInput)}
+                  />
                  {filterText && (
                      <button onClick={() => setFilterText("")} className="text-muted-foreground hover:text-foreground">
                          <Trash2 className={densityUi.filterClearIcon} />
