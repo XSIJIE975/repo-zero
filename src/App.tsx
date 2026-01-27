@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/components/ui";
 import { HeaderControls } from "@/components/HeaderControls";
 import { LogPanel } from "@/components/LogPanel";
@@ -12,9 +12,22 @@ import { useWizard } from "@/hooks/useWizard";
 import { addLog, parseLogEvent } from "@/lib/logStore";
 import { listen } from "@tauri-apps/api/event";
 import { isTauriRuntime } from "@/lib/tauriRuntime";
+import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
+import { useTranslation } from "react-i18next";
+import { Loader2 } from "lucide-react";
+import { GitNotInstalledPage } from "@/components/GitNotInstalledPage";
+import { RepoInfo } from "@/types/wizard";
 
 function App() {
   const wizard = useWizard();
+  const { t } = useTranslation();
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    wizard.checkGitStatus();
+  }, []);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -31,6 +44,68 @@ function App() {
       unlisten.then((f) => f());
     };
   }, []);
+
+  const analyzeRepo = async (path: string) => {
+    wizard.setIsProcessing(true);
+    wizard.setIsLogPanelOpen(true);
+    try {
+      const info = await invoke<RepoInfo>("scan_repo", { path });
+      wizard.setRepoInfo(info);
+      
+      const inferred =
+        info.detected_default_branch ??
+        (info.default_branch_candidates.length === 1
+          ? info.default_branch_candidates[0]
+          : "");
+      wizard.setTargetBranch(inferred);
+      wizard.setStep("analyze");
+      setValidationError(null);
+    } catch (err) {
+      const errStr = String(err);
+      if (errStr.includes("I18N:validation.notGitRepo")) {
+        setValidationError("notGitRepo");
+      } else {
+        console.error(err);
+        alert(t("analysis.alertFailed", { error: errStr }));
+      }
+    } finally {
+      wizard.setIsProcessing(false);
+    }
+  };
+
+  const handleSelectFolder = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+      });
+      if (selected) {
+        wizard.setRepoPath(selected);
+        setSelectedPath(selected);
+        setValidationError(null);
+        await analyzeRepo(selected);
+      }
+    } catch (e) {
+      console.error("Dialog failed", e);
+    }
+  };
+
+  if (wizard.gitStatus.status === "checking") {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (wizard.gitStatus.status === "missing") {
+    return (
+      <GitNotInstalledPage
+        onRetry={wizard.checkGitStatus}
+        isChecking={false}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/20">
@@ -61,9 +136,9 @@ function App() {
             {wizard.step === "connect" && (
               <ConnectStep
                 isProcessing={wizard.isProcessing}
-                onSelectFolder={wizard.handleSelectFolder}
-                validationError={null}
-                selectedPath={wizard.repoPath || null}
+                onSelectFolder={handleSelectFolder}
+                validationError={validationError}
+                selectedPath={selectedPath}
                 gitVersionWarning={wizard.gitStatus.status === "available" && !wizard.gitStatus.meetsMinimum}
                 gitVersion={wizard.gitStatus.status === "available" ? wizard.gitStatus.version : null}
               />
