@@ -96,6 +96,10 @@
   "log_panel.clear_tooltip": "Clear logs",
   "log_panel.minimize_tooltip": "Minimize",
   "log_panel.resize_tooltip": "Drag to resize",
+  "log_panel.density.toggle": "Density",
+  "log_panel.density.label": "Density",
+  "log_panel.density.compact": "Compact",
+  "log_panel.density.comfortable": "Comfortable",
 
 
 

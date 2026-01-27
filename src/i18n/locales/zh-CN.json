@@ -96,6 +96,10 @@
   "log_panel.clear_tooltip": "清空日志",
   "log_panel.minimize_tooltip": "最小化",
   "log_panel.resize_tooltip": "拖动调整高度",
+  "log_panel.density.toggle": "密度",
+  "log_panel.density.label": "密度",
+  "log_panel.density.compact": "紧凑",
+  "log_panel.density.comfortable": "舒适",
 
 
 
