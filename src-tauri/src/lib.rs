@@ -64,8 +64,15 @@ fn parse_ls_remote_head_branch(output: &str) -> Option<String> {
 }
 
 #[tauri::command]
-async fn scan_repo(path: String) -> Result<RepoInfo, String> {
+async fn scan_repo(app: AppHandle, path: String) -> Result<RepoInfo, String> {
     let repo_path = Path::new(&path);
+
+    // 验证是否是 Git 仓库
+    emit_i18n(&app, "validation.validatingRepo", None);
+    run_git_cmd(repo_path, &["rev-parse", "--git-dir"])
+        .map_err(|_| "I18N:validation.notGitRepo".to_string())?;
+
+    emit_i18n(&app, "validation.scanningRepo", None);
 
     // 1. Remote URL
     let remote_url = run_git_cmd(repo_path, &["remote", "get-url", "origin"])
