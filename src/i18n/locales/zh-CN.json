@@ -31,14 +31,10 @@
   "success.startOver": "重新开始",
   "success.viewLogs": "查看日志",
   "success.remoteCleanNote": "你的远程仓库现在已清理完成。请通知团队重新克隆仓库。",
-
   "lang.label": "语言",
-
   "analysis.alertFailed": "分析仓库失败：{{error}}",
-
   "execute.startingCleanup": "开始清理过程...",
   "execute.pleaseWait": "请稍候...",
-
   "tauri.readingConfig": "读取配置中...",
   "tauri.targetRemote": "目标远程：{{remote}}",
   "tauri.initializingCleanRepo": "正在初始化干净仓库...",
@@ -52,7 +48,6 @@
   "tauri.warning.batchDeleteTagsFailed": "批量删除标签失败：{{error}}",
   "tauri.cleanupComplete": "清理完成。",
   "tauri.cleanupCompletedWithWarnings": "清理已完成，但存在警告（部分分支/标签可能未删除）。",
-
   "danger.willIntro": "此操作不可逆。它将：",
   "danger.will.history": "永久删除所有历史（提交、日志）。",
   "danger.will.branchesTags": "删除远程上的所有分支和标签。",
@@ -61,23 +56,19 @@
   "danger.confirmSuffix": "以确认：",
   "danger.confirmPhrase": "nuclear reset",
   "danger.confirmPlaceholder": "nuclear reset",
-
   "danger.targetBranch.label": "重置后的主分支",
   "danger.targetBranch.placeholder": "例如 main",
   "danger.targetBranch.dropdownLabel": "选择候选分支",
   "danger.targetBranch.hint.required": "无法确定唯一的主分支（可能同时存在 main/master，或两者都不存在）。请手动选择或输入要作为重置后主分支的名称。",
   "danger.targetBranch.hint.detected": "已检测到主分支，如有需要可手动修改。",
-
   "header.lang.english": "英语",
   "header.lang.chinese": "中文",
-
   "header.theme.toggle": "切换主题",
   "header.theme.mode": "模式",
   "header.theme.light": "浅色",
   "header.theme.dark": "深色",
   "header.theme.system": "系统",
   "header.theme.accentColor": "强调色",
-
   "header.theme.accent.default": "默认",
   "header.theme.accent.indigo": "靛蓝",
   "header.theme.accent.red": "红色",
@@ -87,7 +78,6 @@
   "header.theme.accent.yellow": "黄色",
   "header.theme.accent.violet": "紫色",
   "header.theme.accent.rose": "玫瑰",
-
   "log_panel.title": "日志",
   "log_panel.no_logs": "暂无日志",
   "log_panel.filter_placeholder": "过滤...",
@@ -100,9 +90,7 @@
   "log_panel.density.label": "密度",
   "log_panel.density.compact": "紧凑",
   "log_panel.density.comfortable": "舒适",
-
-
-
+  "log_panel.clear_filter_tooltip": "清除过滤",
   "log_panel.level.all": "全部",
   "log_panel.level.error": "错误",
   "log_panel.level.warn": "警告",
