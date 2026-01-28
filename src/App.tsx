@@ -47,7 +47,7 @@ function App() {
 
   const analyzeRepo = async (path: string) => {
     wizard.setIsProcessing(true);
-    wizard.setIsLogPanelOpen(true);
+    wizard.setIsLogPanelOpen(false);
     try {
       const info = await invoke<RepoInfo>("scan_repo", { path });
       wizard.setRepoInfo(info);
