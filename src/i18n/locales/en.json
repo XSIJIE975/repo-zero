@@ -109,5 +109,19 @@
   "validation.selectedPath": "Selected path: {{path}}",
   "validation.reselect": "Select Another Folder",
   "validation.scanningRepo": "Scanning repository...",
-  "validation.validatingRepo": "Validating Git repository..."
+   "validation.validatingRepo": "Validating Git repository...",
+   "about.title": "About",
+   "about.description": "A tool for cleaning up git repositories.",
+   "about.version": "Version",
+   "about.author": "Author",
+   "about.github": "GitHub",
+   "about.repository": "Repository",
+   "about.checkUpdate": "Check for Updates",
+   "about.checking": "Checking...",
+   "about.upToDate": "You're up to date",
+   "about.license": "MIT License",
+   "updater.newVersion": "New version available",
+   "updater.current": "Current",
+   "updater.latest": "Latest",
+   "updater.viewRelease": "View Release"
 }
