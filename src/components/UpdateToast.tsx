@@ -26,7 +26,7 @@ export function UpdateToast({ updateInfo, onClose }: UpdateToastProps) {
     // 但为了通用，我们假设用户会去 Releases 页面
     // 更好的做法是让后端返回 url，或者这里硬编码 repo url
     // 暂时用 generic 链接，实际项目应替换
-    await open("https://github.com/Starttoaster/repo-zero/releases/latest");
+    await open("https://github.com/XSIJIE975/repo-zero/releases/latest");
   };
 
   return (
