@@ -15,10 +15,12 @@ jobs:
         platform:
           - os: windows-latest
             args: --target x86_64-pc-windows-msvc
+          - os: windows-latest
+            args: --target i686-pc-windows-msvc
           - os: ubuntu-22.04
             args: --target x86_64-unknown-linux-gnu
           - os: macos-latest
-            args: --target universal2-apple-darwin
+            args: --target aarch64-apple-darwin
 
     runs-on: ${{ matrix.platform.os }}
 
@@ -44,7 +46,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu,aarch64-apple-darwin,x86_64-apple-darwin
+          targets: x86_64-pc-windows-msvc,i686-pc-windows-msvc,x86_64-unknown-linux-gnu,aarch64-apple-darwin
 
       - name: Install frontend dependencies
         run: pnpm install
