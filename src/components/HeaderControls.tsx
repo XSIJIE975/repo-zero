@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Languages, Moon, Sun, Monitor, Palette, Ban } from "lucide-react";
-
+import { Languages, Moon, Sun, Monitor, Palette, Ban, Info } from "lucide-react";
 import {
   Button,
   DropdownMenu,
@@ -11,6 +10,7 @@ import {
   DropdownMenuTrigger,
   cn,
 } from "@/components/ui";
+import { AboutDialog } from "@/components/AboutDialog";
 import { setLanguage } from "@/i18n";
 import {
   getThemeSettings,
@@ -83,6 +83,19 @@ export function HeaderControls() {
           </DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <div className="h-4 w-[1px] bg-border/50" />
+
+      {/* About Dialog */}
+      <AboutDialog>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+        >
+          <Info className="h-4 w-4" />
+        </Button>
+      </AboutDialog>
 
       <div className="h-4 w-[1px] bg-border/50" />
 

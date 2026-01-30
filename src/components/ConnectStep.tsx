@@ -1,17 +1,36 @@
 import { useTranslation } from "react-i18next";
 import { FolderOpen, Loader2 } from "lucide-react";
-import { cn } from "@/components/ui";
+import { cn, Button } from "@/components/ui";
 
 interface ConnectStepProps {
   isProcessing: boolean;
   onSelectFolder: () => void;
+  validationError: string | null;
+  selectedPath: string | null;
+  gitVersionWarning: boolean;
+  gitVersion: string | null;
 }
 
-export function ConnectStep({ isProcessing, onSelectFolder }: ConnectStepProps) {
+export function ConnectStep({ 
+  isProcessing, 
+  onSelectFolder,
+  validationError,
+  selectedPath,
+  gitVersionWarning,
+  gitVersion
+}: ConnectStepProps) {
   const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-8 text-center items-center">
+      {gitVersionWarning && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-4">
+          <p className="text-yellow-600 dark:text-yellow-500 text-sm">
+            {t("git.outdated.desc", { version: gitVersion })}
+          </p>
+        </div>
+      )}
+
       <div className="space-y-3">
         <h2 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/50">
           {t("selectRepo.title")}
@@ -50,6 +69,20 @@ export function ConnectStep({ isProcessing, onSelectFolder }: ConnectStepProps) 
           </h3>
         </div>
       </div>
+
+      {validationError && (
+        <div className="mt-4 text-center space-y-2">
+          <p className="text-sm text-muted-foreground">
+            {t("validation.selectedPath", { path: selectedPath })}
+          </p>
+          <p className="text-destructive font-medium">
+            {t(`validation.${validationError}`)}
+          </p>
+          <Button variant="outline" onClick={onSelectFolder} className="mt-3">
+            {t("validation.reselect")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

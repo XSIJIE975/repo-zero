@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { open } from "@tauri-apps/plugin-dialog"
 import { addLog } from "@/lib/logStore"
 import { useTranslation } from "react-i18next"
-import { Step, RepoInfo } from "@/types/wizard"
+import { Step, RepoInfo, GitStatus } from "@/types/wizard"
 
 export function useWizard() {
   const { t } = useTranslation()
@@ -15,6 +15,7 @@ export function useWizard() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [targetBranch, setTargetBranch] = useState<string>("")
   const [isLogPanelOpen, setIsLogPanelOpen] = useState(false)
+  const [gitStatus, setGitStatus] = useState<GitStatus>({ status: "checking" })
 
   const handleSelectFolder = async () => {
     try {
@@ -33,6 +34,7 @@ export function useWizard() {
 
   const analyzeRepo = async (path: string) => {
     setIsProcessing(true)
+    setIsLogPanelOpen(true)
     try {
       const info = await invoke<RepoInfo>("scan_repo", { path })
       setRepoInfo(info)
@@ -93,6 +95,25 @@ export function useWizard() {
     })
   }
 
+  const checkGitStatus = async () => {
+    setGitStatus({ status: "checking" })
+    try {
+      const result = await invoke<{ installed: boolean; version: string | null; meets_minimum: boolean }>("check_git_status")
+      if (!result.installed) {
+        setGitStatus({ status: "missing" })
+      } else {
+        setGitStatus({ 
+          status: "available", 
+          version: result.version ?? "unknown",
+          meetsMinimum: result.meets_minimum 
+        })
+      }
+    } catch (e) {
+      console.error("Git check failed", e)
+      setGitStatus({ status: "missing" })
+    }
+  }
+
   return {
     step,
     setStep,
@@ -112,5 +133,8 @@ export function useWizard() {
     analyzeRepo,
     handleExecute,
     handleStartOver,
+    gitStatus,
+    setGitStatus,
+    checkGitStatus,
   }
 }
