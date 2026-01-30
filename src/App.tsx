@@ -18,16 +18,34 @@ import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { GitNotInstalledPage } from "@/components/GitNotInstalledPage";
 import { RepoInfo } from "@/types/wizard";
+import { useUpdater } from "@/hooks/useUpdater";
+import { UpdateToast } from "@/components/UpdateToast";
 
 function App() {
   const wizard = useWizard();
   const { t } = useTranslation();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const { status: updateStatus, updateInfo, checkForUpdate } = useUpdater();
+  const [showUpdateToast, setShowUpdateToast] = useState(false);
 
   useEffect(() => {
     wizard.checkGitStatus();
   }, []);
+
+  // Update check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkForUpdate();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [checkForUpdate]);
+
+  useEffect(() => {
+    if (updateStatus === "available") {
+      setShowUpdateToast(true);
+    }
+  }, [updateStatus]);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -113,6 +131,13 @@ function App() {
         isOpen={wizard.isLogPanelOpen}
         onToggle={wizard.setIsLogPanelOpen}
       />
+
+      {showUpdateToast && updateInfo && (
+        <UpdateToast 
+          updateInfo={updateInfo} 
+          onClose={() => setShowUpdateToast(false)} 
+        />
+      )}
 
       <Sidebar currentStep={wizard.step} />
 
