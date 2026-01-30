@@ -1,7 +1,7 @@
 {
   "name": "repo-zero",
   "private": false,
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "The nuclear option for bloated Git repositories. Reset history and branches with a beautiful GUI.",
   "author": "XSIJIE975",
   "license": "MIT",
