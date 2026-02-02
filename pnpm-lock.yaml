@@ -90,6 +90,9 @@ importers:
       '@changesets/cli':
         specifier: ^2.29.8
         version: 2.29.8(@types/node@22.19.7)
+      '@changesets/get-github-info':
+        specifier: ^0.7.0
+        version: 0.7.0
       '@commitlint/cli':
         specifier: ^20.3.1
         version: 20.3.1(@types/node@22.19.7)(typescript@5.9.3)
