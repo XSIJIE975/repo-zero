@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-shell";
-import { Github, ExternalLink, Loader2, Check, AlertCircle, Download } from "lucide-react";
+import { Github, Loader2, Check, AlertCircle, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -13,6 +13,7 @@ import {
 // Import package.json to get version
 // Note: In Vite, we can import JSON files directly
 import pkg from "../../package.json";
+import logo from "@/assets/logo.png";
 import { useUpdater } from "@/hooks/useUpdater";
 import { ReactNode } from "react";
 
@@ -48,43 +49,36 @@ export function AboutDialog({ children }: AboutDialogProps) {
             {t("about.description", "A tool for cleaning up git repositories.")}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-20 w-20 rounded-xl bg-primary/10 flex items-center justify-center">
-              {/* Logo placeholder - using text for now */}
-              <span className="text-4xl font-bold text-primary">RZ</span>
+        <div className="grid gap-5 py-4">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-24 w-24 rounded-2xl overflow-hidden border border-border/50 shadow-sm">
+              <img src={logo} alt="RepoZero Logo" className="h-full w-full object-cover" />
             </div>
-            <div className="text-center">
-              <h3 className="text-lg font-semibold">RepoZero</h3>
+            <div className="text-center space-y-0.5">
+              <h3 className="text-xl font-bold tracking-tight">RepoZero</h3>
               <p className="text-sm text-muted-foreground">
                 v{pkg.version}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              className="justify-between"
+              className="h-auto flex-col gap-1.5 py-3 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
               onClick={() => handleOpenLink("https://github.com/XSIJIE975")}
             >
-              <span className="flex items-center gap-2">
-                <Github className="h-4 w-4" />
-                {t("about.author")} (XSIJIE975)
-              </span>
-              <ExternalLink className="h-3 w-3 opacity-50" />
+              <Github className="h-5 w-5" />
+              <span className="text-xs font-medium">@XSIJIE975</span>
             </Button>
             
             <Button
               variant="outline"
-              className="justify-between"
+              className="h-auto flex-col gap-1.5 py-3 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
               onClick={() => handleOpenLink("https://github.com/XSIJIE975/repo-zero")}
             >
-              <span className="flex items-center gap-2">
-                <Github className="h-4 w-4" />
-                {t("about.repository")}
-              </span>
-              <ExternalLink className="h-3 w-3 opacity-50" />
+              <Github className="h-5 w-5" />
+              <span className="text-xs font-medium">{t("about.repository")}</span>
             </Button>
           </div>
 
@@ -139,10 +133,6 @@ export function AboutDialog({ children }: AboutDialogProps) {
                  </Button>
                </div>
              )}
-
-            <p className="mt-2 text-xs text-center text-muted-foreground">
-              {t("about.license", "MIT License")}
-            </p>
           </div>
         </div>
       </DialogContent>
