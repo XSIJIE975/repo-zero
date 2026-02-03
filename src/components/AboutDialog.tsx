@@ -1,5 +1,6 @@
 import { open } from "@tauri-apps/plugin-shell";
-import { Github, Loader2, Check, AlertCircle, Download } from "lucide-react";
+import { Loader2, Check, AlertCircle, Download } from "lucide-react";
+import GithubIcon from "@/assets/svg/github.svg";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -68,7 +69,7 @@ export function AboutDialog({ children }: AboutDialogProps) {
               className="h-auto flex-col gap-1.5 py-3 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
               onClick={() => handleOpenLink("https://github.com/XSIJIE975")}
             >
-              <Github className="h-5 w-5" />
+              <img src={GithubIcon} className="h-5 w-5 dark:invert" alt="GitHub" />
               <span className="text-xs font-medium">@XSIJIE975</span>
             </Button>
             
@@ -77,7 +78,7 @@ export function AboutDialog({ children }: AboutDialogProps) {
               className="h-auto flex-col gap-1.5 py-3 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
               onClick={() => handleOpenLink("https://github.com/XSIJIE975/repo-zero")}
             >
-              <Github className="h-5 w-5" />
+              <img src={GithubIcon} className="h-5 w-5 dark:invert" alt="GitHub" />
               <span className="text-xs font-medium">{t("about.repository")}</span>
             </Button>
           </div>
