@@ -16,6 +16,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
     
     steps:
       - name: Checkout
@@ -69,6 +70,7 @@ jobs:
           fi
 
       - name: Create and Push Tag
+        id: tag
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
@@ -76,9 +78,28 @@ jobs:
           # Check if tag already exists
           if git rev-parse "v$VERSION" >/dev/null 2>&1; then
             echo "Tag v$VERSION already exists, skipping..."
+            echo "created=false" >> $GITHUB_OUTPUT
           else
             echo "Creating tag v$VERSION"
             git tag "v$VERSION"
             git push origin "v$VERSION"
             echo "✅ Tag v$VERSION created and pushed"
+            echo "created=true" >> $GITHUB_OUTPUT
+            echo "tag=v$VERSION" >> $GITHUB_OUTPUT
           fi
+
+      - name: Trigger Release workflow
+        if: steps.tag.outputs.created == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'release.yml',
+              ref: 'main',
+              inputs: {
+                tag: '${{ steps.tag.outputs.tag }}'
+              }
+            });
+            console.log('✅ Triggered Release workflow for ${{ steps.tag.outputs.tag }}');
